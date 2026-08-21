@@ -6,17 +6,17 @@ import (
 )
 
 type Scheduler struct {
+	numOfWorks int
 }
 
-func NewScheduler() Scheduler {
-	return Scheduler{}
+func NewScheduler(numOfWorks int) Scheduler {
+	return Scheduler{numOfWorks: numOfWorks}
 }
 
 func (s Scheduler) Run(manager device.DeviceManager) {
-
 	var wg sync.WaitGroup
 
-	for i := range 1 {
+	for i := range s.numOfWorks {
 		wg.Add(1)
 
 		go worker(

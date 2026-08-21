@@ -1,33 +1,56 @@
 package device
 
+import (
+	"hash/fnv"
+)
+
 type DeviceManager struct {
-	devices map[string]*actor
+	numShards int
+	shards    map[int]map[string]*actor
 }
 
-func NewDeviceManager() DeviceManager {
+func NewDeviceManager(numShards int) DeviceManager {
+	shards := make(map[int]map[string]*actor)
+	for i := range numShards {
+		shards[i] = make(map[string]*actor)
+	}
+
 	return DeviceManager{
-		devices: make(map[string]*actor),
+		shards:    shards,
+		numShards: numShards,
 	}
 }
 
 func (m DeviceManager) Add(id string) {
-	m.devices[id] = newActor(id)
+	s := m.shardIndex(id)
+	m.shards[s][id] = newActor(id)
 }
 
 func (m DeviceManager) GetState(id string) DeviceState {
-	return m.devices[id].State()
+	s := m.shardIndex(id)
+	return m.shards[s][id].State()
 }
 
 func (m DeviceManager) Send(id string, task Message) {
-	m.devices[id].Send(task)
+	s := m.shardIndex(id)
+	m.shards[s][id].Send(task)
 }
 
-func (m DeviceManager) Store() {
-	for _, d := range m.devices {
+func (m DeviceManager) Store(shardID int) {
+	// TODO shardID no in range
+	for _, d := range m.shards[shardID] {
 		d.Store()
 	}
 }
 
 func (m DeviceManager) ShutDown(id string) {
-	m.devices[id].Send(shutdown{})
+	s := m.shardIndex(id)
+	m.shards[s][id].Send(shutdown{})
+}
+
+func (m DeviceManager) shardIndex(id string) int {
+	h := fnv.New32a()
+	_, _ = h.Write([]byte(id))
+
+	return int(h.Sum32() % uint32(m.numShards))
 }

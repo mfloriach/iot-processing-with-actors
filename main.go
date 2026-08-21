@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	manager := device.NewDeviceManager()
+	manager := device.NewDeviceManager(4)
 	manager.Add("sensor-000")
 	manager.Add("sensor-001")
 	manager.Add("sensor-002")
@@ -20,7 +20,7 @@ func main() {
 	manager.Add("sensor-004")
 	manager.Add("sensor-005")
 
-	sched := scheduler.NewScheduler()
+	sched := scheduler.NewScheduler(4)
 	go sched.Run(manager)
 
 	go func() {

@@ -13,6 +13,6 @@ func worker(
 	defer wg.Done()
 
 	for {
-		manager.Store()
+		manager.Store(id)
 	}
 }

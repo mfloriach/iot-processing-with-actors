@@ -1,13 +1,8 @@
 package device
 
 type DeviceState struct {
-	Data            Telemetry
-	Online          bool
-	FirmwareVersion string
-}
-
-type Message interface {
-	Apply(*DeviceState)
+	Data   Telemetry
+	Online bool
 }
 
 func (s *DeviceState) Dispatch(msg Message) {
