@@ -25,7 +25,7 @@ func main() {
 
 	go func() {
 		for i := 0; i < 10; i++ {
-			state := manager.GetState("sensor-001")
+			state := manager.State("sensor-001")
 			jsonData, err := json.Marshal(state)
 			if err != nil {
 				log.Fatalf("Error marshaling to JSON: %s", err)
@@ -39,7 +39,7 @@ func main() {
 
 	go func() {
 		for i := 0; i < 10; i++ {
-			state := manager.GetState("sensor-001")
+			state := manager.State("sensor-001")
 			jsonData, err := json.Marshal(state)
 			if err != nil {
 				log.Fatalf("Error marshaling to JSON: %s", err)

@@ -5,8 +5,7 @@ import (
 )
 
 type DeviceManager struct {
-	numShards int
-	shards    map[int]map[string]*actor[DeviceState, Message]
+	shards map[int]map[string]*actor[DeviceState, Message]
 }
 
 func NewDeviceManager(numShards int) DeviceManager {
@@ -16,8 +15,7 @@ func NewDeviceManager(numShards int) DeviceManager {
 	}
 
 	return DeviceManager{
-		shards:    shards,
-		numShards: numShards,
+		shards: shards,
 	}
 }
 
@@ -26,7 +24,7 @@ func (m DeviceManager) Add(id string) {
 	m.shards[s][id] = newActor(id, DeviceState{}, Dispatch)
 }
 
-func (m DeviceManager) GetState(id string) DeviceState {
+func (m DeviceManager) State(id string) DeviceState {
 	s := m.shardIndex(id)
 	return m.shards[s][id].State()
 }
@@ -52,5 +50,5 @@ func (m DeviceManager) shardIndex(id string) int {
 	h := fnv.New32a()
 	_, _ = h.Write([]byte(id))
 
-	return int(h.Sum32() % uint32(m.numShards))
+	return int(h.Sum32() % uint32(len(m.shards)))
 }
