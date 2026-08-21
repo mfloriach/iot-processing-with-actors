@@ -4,39 +4,41 @@ import (
 	"sync/atomic"
 )
 
-type actor struct {
+type actor[S any, M any] struct {
 	id       string
-	mailbox  chan Message
+	mailbox  chan M
 	snapshot atomic.Value
+
+	dispatch func(*S, M)
 }
 
-func newActor(id string) *actor {
-	actor := &actor{
-		id:      id,
-		mailbox: make(chan Message, 100),
+func newActor[S any, M any](id string, initial S, dispatch func(*S, M)) *actor[S, M] {
+	actor := &actor[S, M]{
+		id:       id,
+		mailbox:  make(chan M, 100),
+		dispatch: dispatch,
 	}
 
-	actor.snapshot.Store(DeviceState{})
+	actor.snapshot.Store(initial)
 
 	return actor
 }
 
-func (a *actor) Store() {
-	state := DeviceState{}
-
+func (a *actor[S, M]) Store() {
 	select {
 	case msg := <-a.mailbox:
-		state.Dispatch(msg)
+		state := a.snapshot.Load().(S)
+		a.dispatch(&state, msg)
 		a.snapshot.Store(state)
 	default:
 		return
 	}
 }
 
-func (a *actor) Send(msg Message) {
+func (a *actor[S, M]) Send(msg M) {
 	a.mailbox <- msg
 }
 
-func (a *actor) State() DeviceState {
-	return a.snapshot.Load().(DeviceState)
+func (a *actor[S, M]) State() S {
+	return a.snapshot.Load().(S)
 }

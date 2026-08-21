@@ -5,6 +5,6 @@ type DeviceState struct {
 	Online bool
 }
 
-func (s *DeviceState) Dispatch(msg Message) {
-	msg.Apply(s)
+func Dispatch(state *DeviceState, msg Message) {
+	msg.Apply(state)
 }

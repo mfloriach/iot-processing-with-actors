@@ -6,13 +6,13 @@ import (
 
 type DeviceManager struct {
 	numShards int
-	shards    map[int]map[string]*actor
+	shards    map[int]map[string]*actor[DeviceState, Message]
 }
 
 func NewDeviceManager(numShards int) DeviceManager {
-	shards := make(map[int]map[string]*actor)
+	shards := make(map[int]map[string]*actor[DeviceState, Message])
 	for i := range numShards {
-		shards[i] = make(map[string]*actor)
+		shards[i] = make(map[string]*actor[DeviceState, Message])
 	}
 
 	return DeviceManager{
@@ -23,7 +23,7 @@ func NewDeviceManager(numShards int) DeviceManager {
 
 func (m DeviceManager) Add(id string) {
 	s := m.shardIndex(id)
-	m.shards[s][id] = newActor(id)
+	m.shards[s][id] = newActor(id, DeviceState{}, Dispatch)
 }
 
 func (m DeviceManager) GetState(id string) DeviceState {
