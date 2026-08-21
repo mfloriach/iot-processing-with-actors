@@ -19,8 +19,16 @@ func (m Telemetry) Apply(state *DeviceState) {
 	state.Online = true
 }
 
-type shutdown struct{}
+type Shutdown struct{}
 
-func (m shutdown) Apply(state *DeviceState) {
+func (m Shutdown) Apply(state *DeviceState) {
 	fmt.Println("shouting down the device ...")
+}
+
+type SetBattery struct {
+	Battery float64
+}
+
+func (m SetBattery) Apply(state *DeviceState) {
+	state.Data.Battery = m.Battery
 }

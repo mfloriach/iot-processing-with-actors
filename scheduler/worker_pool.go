@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"datacollector/device"
+	"fmt"
 	"sync"
 )
 
@@ -13,6 +14,8 @@ func worker(
 	defer wg.Done()
 
 	for {
-		manager.Store(id)
+		if err := manager.Store(id); err != nil {
+			fmt.Println(err)
+		}
 	}
 }

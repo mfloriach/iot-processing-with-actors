@@ -1,4 +1,4 @@
-package device
+package main
 
 import (
 	"sync/atomic"
@@ -12,7 +12,7 @@ type actor[S any, M any] struct {
 	dispatch func(*S, M)
 }
 
-func newActor[S any, M any](id string, initial S, dispatch func(*S, M)) *actor[S, M] {
+func NewActor[S any, M any](id string, initial S, dispatch func(*S, M)) *actor[S, M] {
 	actor := &actor[S, M]{
 		id:       id,
 		mailbox:  make(chan M, 100),
