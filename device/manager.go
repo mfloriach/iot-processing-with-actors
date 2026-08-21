@@ -1,24 +1,29 @@
 package device
 
 import (
-	"errors"
 	"hash/fnv"
+	"iter"
 )
 
 type DeviceActor interface {
 	Send(Message)
 	State() DeviceState
-	Store()
+	Update()
+}
+
+type shard struct {
+	devices map[string]DeviceActor
+	ready   chan DeviceActor
 }
 
 type DeviceManager struct {
-	shards map[int]map[string]DeviceActor
+	shards map[int]shard
 }
 
 func NewDeviceManager(numShards int) DeviceManager {
-	shards := make(map[int]map[string]DeviceActor)
+	shards := make(map[int]shard)
 	for i := range numShards {
-		shards[i] = make(map[string]DeviceActor)
+		shards[i] = shard{devices: make(map[string]DeviceActor), ready: make(chan DeviceActor)}
 	}
 
 	return DeviceManager{
@@ -27,35 +32,39 @@ func NewDeviceManager(numShards int) DeviceManager {
 }
 
 func (m DeviceManager) Add(id string, device DeviceActor) {
-	s := m.shardIndex(id)
-	m.shards[s][id] = device
+	m.getShard(id).devices[id] = device
 }
 
 func (m DeviceManager) State(id string) DeviceState {
-	s := m.shardIndex(id)
-	return m.shards[s][id].State()
+	return m.getShard(id).devices[id].State()
 }
 
 func (m DeviceManager) Send(id string, task Message) {
-	s := m.shardIndex(id)
-	m.shards[s][id].Send(task)
+	deviceID := m.getShard(id).devices[id]
+
+	deviceID.Send(task)
+	m.getShard(id).ready <- deviceID
 }
 
-func (m DeviceManager) Store(shardID int) error {
+func (m DeviceManager) Next(shardID int) iter.Seq[DeviceActor] {
 	if shardID < 0 || shardID > len(m.shards) {
-		return errors.New("shard numer does not exist")
+		// return errors.New("shard numer does not exist")
 	}
 
-	for _, d := range m.shards[shardID] {
-		d.Store()
-	}
+	ready := m.shards[shardID].ready
 
-	return nil
+	return func(yield func(DeviceActor) bool) {
+		for {
+			if !yield(<-ready) {
+				return
+			}
+		}
+	}
 }
 
-func (m DeviceManager) shardIndex(id string) int {
+func (m DeviceManager) getShard(id string) shard {
 	h := fnv.New32a()
 	_, _ = h.Write([]byte(id))
 
-	return int(h.Sum32() % uint32(len(m.shards)))
+	return m.shards[int(h.Sum32()%uint32(len(m.shards)))]
 }

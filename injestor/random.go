@@ -1,8 +1,11 @@
 package injestor
 
 import (
+	"context"
 	"datacollector/device"
 	"iter"
+	"math/rand"
+	"time"
 )
 
 type InjestorRandom struct {
@@ -15,17 +18,28 @@ func NewInjestorRandom(count int) InjestorRandom {
 
 func (i InjestorRandom) Run() iter.Seq[device.Telemetry] {
 	return func(yield func(device.Telemetry) bool) {
-		for i := i.count; i >= 1; i-- {
-			// id := strconv.Itoa(i % 5)
+		for {
+			ctx, cancel := context.WithTimeout(
+				context.TODO(),
+				5*time.Second,
+			)
+			defer cancel()
+
 			if !yield(device.Telemetry{
 				DeviceID:    "sensor-001",
-				Temperature: 20,
-				Humidity:    50,
-				Battery:     10,
-				Noise:       5,
+				Temperature: randomNumber(50),
+				Humidity:    randomNumber(70),
+				Battery:     randomNumber(100),
+				Noise:       randomNumber(20),
+
+				Context: ctx,
 			}) {
 				return
 			}
 		}
 	}
+}
+
+func randomNumber(max int) float64 {
+	return float64(rand.Intn(max + 1))
 }

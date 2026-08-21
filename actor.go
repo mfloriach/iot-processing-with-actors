@@ -8,7 +8,6 @@ type actor[S any, M any] struct {
 	id       string
 	mailbox  chan M
 	snapshot atomic.Value
-
 	dispatch func(*S, M)
 }
 
@@ -24,7 +23,7 @@ func NewActor[S any, M any](id string, initial S, dispatch func(*S, M)) *actor[S
 	return actor
 }
 
-func (a *actor[S, M]) Store() {
+func (a *actor[S, M]) Update() {
 	select {
 	case msg := <-a.mailbox:
 		state := a.snapshot.Load().(S)

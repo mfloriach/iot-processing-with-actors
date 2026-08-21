@@ -19,10 +19,12 @@ func (s Scheduler) Run(manager device.DeviceManager) {
 	for i := range s.numOfWorks {
 		wg.Add(1)
 
-		go worker(
-			i,
-			manager,
-			&wg,
-		)
+		go func() {
+			defer wg.Done()
+
+			for d := range manager.Next(i) {
+				d.Update()
+			}
+		}()
 	}
 }

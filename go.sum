@@ -1,2 +1,4 @@
+github.com/mickamy/slog-pretty v0.0.1 h1:fnkZkx7jsZG+9IdAKqIRkFmQnVsNsMwYQrJKWn5/H08=
+github.com/mickamy/slog-pretty v0.0.1/go.mod h1:yyrt8CvxeB38/LlgAO/Jq7Bbx7be6d3UeJOeU41Jseg=
 github.com/tochemey/goakt/v4 v4.5.1 h1:cMT4GNaW6D4NRyc6ytmzUUsX0n2/Y8JwcmWPMg6YsIs=
 github.com/tochemey/goakt/v4 v4.5.1/go.mod h1:iJyiLuiaPer4gi9XumfuRXy5U5xysuECUt9Ob86Zv3A=
