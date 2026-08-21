@@ -22,9 +22,7 @@ func (s Scheduler) Run(manager device.DeviceManager) {
 		go func() {
 			defer wg.Done()
 
-			for d := range manager.Next(i) {
-				d.Update()
-			}
+			manager.Process(i)
 		}()
 	}
 }

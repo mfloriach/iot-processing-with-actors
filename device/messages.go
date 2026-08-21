@@ -2,11 +2,13 @@ package device
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 )
 
 type Message interface {
+	GetDeviceID() string
 	Apply(*DeviceState)
 }
 
@@ -18,6 +20,10 @@ type Telemetry struct {
 	Noise       float64
 
 	Context context.Context `json:"-"`
+}
+
+func (m Telemetry) GetDeviceID() string {
+	return m.DeviceID
 }
 
 func (m Telemetry) Apply(state *DeviceState) {
@@ -44,4 +50,19 @@ type SetBattery struct {
 
 func (m SetBattery) Apply(state *DeviceState) {
 	state.Data.Battery = m.Battery
+}
+
+type SetAlarm struct {
+	DeviceID string
+	Value    float64
+
+	Context context.Context `json:"-"`
+}
+
+func (m SetAlarm) GetDeviceID() string {
+	return m.DeviceID
+}
+
+func (m SetAlarm) Apply(state *DeviceState) {
+	fmt.Println("Alarm triggered.....")
 }

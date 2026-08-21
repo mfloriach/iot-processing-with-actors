@@ -2,7 +2,6 @@ package device
 
 import (
 	"hash/fnv"
-	"iter"
 )
 
 type DeviceActor interface {
@@ -40,25 +39,18 @@ func (m DeviceManager) State(id string) DeviceState {
 }
 
 func (m DeviceManager) Send(id string, task Message) {
-	deviceID := m.getShard(id).devices[id]
+	device := m.getShard(id).devices[id]
 
-	deviceID.Send(task)
-	m.getShard(id).ready <- deviceID
+	device.Send(task)
+
+	m.getShard(id).ready <- device
 }
 
-func (m DeviceManager) Next(shardID int) iter.Seq[DeviceActor] {
-	if shardID < 0 || shardID > len(m.shards) {
-		// return errors.New("shard numer does not exist")
-	}
-
+func (m DeviceManager) Process(shardID int) {
 	ready := m.shards[shardID].ready
 
-	return func(yield func(DeviceActor) bool) {
-		for {
-			if !yield(<-ready) {
-				return
-			}
-		}
+	for t := range ready {
+		t.Update()
 	}
 }
 

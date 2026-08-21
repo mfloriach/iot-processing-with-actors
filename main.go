@@ -1,10 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"log/slog"
 	"os"
-	"time"
 
 	"datacollector/device"
 	"datacollector/injestor"
@@ -32,43 +30,9 @@ func main() {
 	go sched.Run(manager)
 
 	go func() {
-		ticker := time.NewTicker(time.Second)
-
-		for t := range ticker.C {
-			state := manager.State("sensor-001")
-			jsonData, err := json.Marshal(state)
-			if err != nil {
-				slog.Error("Error marshaling to JSON", slog.Any("error", err))
-			}
-
-			slog.Info("lister 1",
-				slog.String("state", string(jsonData)),
-				slog.String("time", t.String()),
-			)
-		}
-	}()
-
-	go func() {
-		ticker := time.NewTicker(time.Second)
-
-		for t := range ticker.C {
-			state := manager.State("sensor-001")
-			jsonData, err := json.Marshal(state)
-			if err != nil {
-				slog.Error("Error marshaling to JSON", slog.Any("error", err))
-			}
-
-			slog.Info("lister 2",
-				slog.String("state", string(jsonData)),
-				slog.String("time", t.String()),
-			)
-		}
-	}()
-
-	go func() {
-		injestor := injestor.NewInjestorRandom(10)
+		injestor := injestor.NewInjestorRandom()
 		for t := range injestor.Run() {
-			manager.Send(t.DeviceID, t)
+			manager.Send(t.GetDeviceID(), t)
 		}
 	}()
 

@@ -9,15 +9,14 @@ import (
 )
 
 type InjestorRandom struct {
-	count int
 }
 
-func NewInjestorRandom(count int) InjestorRandom {
-	return InjestorRandom{count: count}
+func NewInjestorRandom() InjestorRandom {
+	return InjestorRandom{}
 }
 
-func (i InjestorRandom) Run() iter.Seq[device.Telemetry] {
-	return func(yield func(device.Telemetry) bool) {
+func (i InjestorRandom) Run() iter.Seq[device.Message] {
+	return func(yield func(device.Message) bool) {
 		for {
 			ctx, cancel := context.WithTimeout(
 				context.TODO(),
