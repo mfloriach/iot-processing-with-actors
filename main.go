@@ -1,12 +1,13 @@
 package main
 
 import (
-	"datacollector/device"
 	"encoding/json"
 	"fmt"
 	"log"
 	"time"
 
+	"datacollector/device"
+	"datacollector/injestor"
 	"datacollector/scheduler"
 )
 
@@ -19,11 +20,9 @@ func main() {
 	manager.Add("sensor-004")
 	manager.Add("sensor-005")
 
-	injestor := scheduler.NewInjestorRandom(50)
-	scheduler := scheduler.NewScheduler(injestor.Run)
-	go scheduler.Run(manager.Handler)
+	sched := scheduler.NewScheduler()
+	go sched.Run(manager)
 
-	// Reader 1
 	go func() {
 		for i := 0; i < 10; i++ {
 			state := manager.GetState("sensor-001")
@@ -38,7 +37,6 @@ func main() {
 		}
 	}()
 
-	// Reader 2
 	go func() {
 		for i := 0; i < 10; i++ {
 			state := manager.GetState("sensor-001")
@@ -53,8 +51,13 @@ func main() {
 		}
 	}()
 
+	injestor := injestor.NewInjestorRandom(50)
+	for t := range injestor.Run() {
+		manager.Send(t.DeviceID, t)
+	}
+
 	time.Sleep(time.Second)
-	// manager.Get("sensor-001").Send(device.Shutdown{})
+	manager.ShutDown("sensor-001")
 
 	fmt.Println("device stopped")
 }

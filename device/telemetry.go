@@ -9,3 +9,8 @@ type Telemetry struct {
 }
 
 func (Telemetry) IsMessage() {}
+
+func (m Telemetry) Apply(state *DeviceState) {
+	state.Data = m
+	state.Online = true
+}

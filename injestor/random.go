@@ -1,4 +1,4 @@
-package scheduler
+package injestor
 
 import (
 	"datacollector/device"

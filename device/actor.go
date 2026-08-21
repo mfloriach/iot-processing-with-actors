@@ -4,51 +4,39 @@ import (
 	"sync/atomic"
 )
 
-type deviceActor struct {
+type actor struct {
 	id       string
 	mailbox  chan Message
 	snapshot atomic.Value
 }
 
-func newDeviceActor(id string) *deviceActor {
-	actor := &deviceActor{
+func newActor(id string) *actor {
+	actor := &actor{
 		id:      id,
 		mailbox: make(chan Message, 100),
 	}
 
 	actor.snapshot.Store(DeviceState{})
 
-	go actor.run()
-
 	return actor
 }
 
-func (a *deviceActor) run() {
+func (a *actor) Store() {
 	state := DeviceState{}
 
-	for msg := range a.mailbox {
-		switch msg := msg.(type) {
-
-		case Telemetry:
-			state.Data = msg
-			state.Online = true
-
-			a.snapshot.Store(state)
-
-		case setOnline:
-			state.Online = msg.Online
-			a.snapshot.Store(state)
-
-		case shutdown:
-			return
-		}
+	select {
+	case msg := <-a.mailbox:
+		state.Dispatch(msg)
+		a.snapshot.Store(state)
+	default:
+		return
 	}
 }
 
-func (a *deviceActor) Send(msg Message) {
+func (a *actor) Send(msg Message) {
 	a.mailbox <- msg
 }
 
-func (a *deviceActor) State() DeviceState {
+func (a *actor) State() DeviceState {
 	return a.snapshot.Load().(DeviceState)
 }
