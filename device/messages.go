@@ -12,14 +12,18 @@ type Message interface {
 	Apply(*DeviceState)
 }
 
+type Sample struct {
+	DeviceID string
+	Context  context.Context `json:"-"`
+}
+
 type Telemetry struct {
-	DeviceID    string
+	Sample
+
 	Temperature float64
 	Humidity    float64
 	Battery     float64
 	Noise       float64
-
-	Context context.Context `json:"-"`
 }
 
 func (m Telemetry) GetDeviceID() string {
@@ -43,9 +47,9 @@ func (m Shutdown) Apply(state *DeviceState) {
 }
 
 type SetBattery struct {
-	Battery float64
+	Sample
 
-	Context context.Context `json:"-"`
+	Battery float64
 }
 
 func (m SetBattery) Apply(state *DeviceState) {
@@ -53,10 +57,9 @@ func (m SetBattery) Apply(state *DeviceState) {
 }
 
 type SetAlarm struct {
-	DeviceID string
-	Value    float64
+	Sample
 
-	Context context.Context `json:"-"`
+	Value float64
 }
 
 func (m SetAlarm) GetDeviceID() string {

@@ -25,13 +25,15 @@ func (i InjestorRandom) Run() iter.Seq[device.Message] {
 			defer cancel()
 
 			if !yield(device.Telemetry{
-				DeviceID:    "sensor-001",
+				Sample: device.Sample{
+					DeviceID: "sensor-001",
+					Context:  ctx,
+				},
+
 				Temperature: randomNumber(50),
 				Humidity:    randomNumber(70),
 				Battery:     randomNumber(100),
 				Noise:       randomNumber(20),
-
-				Context: ctx,
 			}) {
 				return
 			}
