@@ -1,7 +1,6 @@
 package device
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"time"
@@ -14,7 +13,7 @@ type Message interface {
 
 type Sample struct {
 	DeviceID string
-	Context  context.Context `json:"-"`
+	TTL      time.Time `json:"-"`
 }
 
 type Telemetry struct {
@@ -31,13 +30,14 @@ func (m Telemetry) GetDeviceID() string {
 }
 
 func (m Telemetry) Apply(state *DeviceState) {
-	select {
-	case <-time.After(time.Second):
-		state.Data = m
-		state.Online = true
-	case <-m.Context.Done():
-		slog.Error("error on update device", slog.Any("error", m.Context.Err()))
-	}
+	elapsed := time.Since(state.Data.TTL)
+
+	slog.Info("TTL progress",
+		"elapsed", elapsed,
+	)
+
+	state.Data = m
+	state.Online = true
 }
 
 type Shutdown struct{}

@@ -1,15 +1,13 @@
 package injestor
 
 import (
-	"context"
 	"datacollector/device"
 	"iter"
 	"math/rand"
 	"time"
 )
 
-type InjestorRandom struct {
-}
+type InjestorRandom struct{}
 
 func NewInjestorRandom() InjestorRandom {
 	return InjestorRandom{}
@@ -17,24 +15,23 @@ func NewInjestorRandom() InjestorRandom {
 
 func (i InjestorRandom) Run() iter.Seq[device.Message] {
 	return func(yield func(device.Message) bool) {
-		for {
-			ctx, cancel := context.WithTimeout(
-				context.TODO(),
-				5*time.Second,
-			)
-			defer cancel()
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
 
-			if !yield(device.Telemetry{
+		for range ticker.C {
+			ok := yield(device.Telemetry{
 				Sample: device.Sample{
 					DeviceID: "sensor-001",
-					Context:  ctx,
+					TTL:      time.Now(),
 				},
 
 				Temperature: randomNumber(50),
 				Humidity:    randomNumber(70),
 				Battery:     randomNumber(100),
 				Noise:       randomNumber(20),
-			}) {
+			})
+
+			if !ok {
 				return
 			}
 		}
