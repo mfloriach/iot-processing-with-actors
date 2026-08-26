@@ -6,9 +6,9 @@ import (
 
 type DeviceActor interface {
 	GetID() string
-	Send(Message)
+	Send(Message) bool
 	State() DeviceState
-	Update()
+	Update() bool
 }
 
 type shard struct {
@@ -23,7 +23,7 @@ type DeviceManager struct {
 func NewDeviceManager(numShards int) DeviceManager {
 	shards := make(map[int]shard)
 	for i := range numShards {
-		shards[i] = shard{devices: make(map[string]DeviceActor), ready: make(chan DeviceActor)}
+		shards[i] = shard{devices: make(map[string]DeviceActor), ready: make(chan DeviceActor, 1024)}
 	}
 
 	return DeviceManager{
@@ -45,16 +45,20 @@ func (m DeviceManager) Send(task Message) {
 	id := task.GetDeviceID()
 
 	device := m.getShard(id).devices[id]
-	device.Send(task)
-
-	m.getShard(id).ready <- device
+	if device.Send(task) {
+		m.getShard(id).ready <- device
+	}
 }
 
 func (m DeviceManager) Process(shardID int) {
 	ready := m.shards[shardID].ready
 
 	for t := range ready {
-		t.Update()
+		// Requeue the actor while it still has work so one busy mailbox does not
+		// monopolize the shard and starve other devices.
+		if t.Update() {
+			ready <- t
+		}
 	}
 }
 

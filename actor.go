@@ -1,6 +1,7 @@
 package main
 
 import (
+	"sync"
 	"sync/atomic"
 )
 
@@ -9,6 +10,8 @@ type actor[S any, M any] struct {
 	mailbox  chan M
 	snapshot atomic.Value
 	dispatch func(*S, M)
+	mu       sync.Mutex
+	queued   bool
 }
 
 func NewActor[S any, M any](id string, initial S, dispatch func(*S, M)) *actor[S, M] {
@@ -23,19 +26,36 @@ func NewActor[S any, M any](id string, initial S, dispatch func(*S, M)) *actor[S
 	return actor
 }
 
-func (a *actor[S, M]) Update() {
-	select {
-	case msg := <-a.mailbox:
-		state := a.snapshot.Load().(S)
-		a.dispatch(&state, msg)
-		a.snapshot.Store(state)
-	default:
-		return
+func (a *actor[S, M]) Update() bool {
+	msg := <-a.mailbox
+
+	state := a.snapshot.Load().(S)
+	a.dispatch(&state, msg)
+	a.snapshot.Store(state)
+
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	if len(a.mailbox) == 0 {
+		a.queued = false
+		return false
 	}
+
+	return true
 }
 
-func (a *actor[S, M]) Send(msg M) {
+func (a *actor[S, M]) Send(msg M) bool {
 	a.mailbox <- msg
+
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	if a.queued {
+		return false
+	}
+
+	a.queued = true
+	return true
 }
 
 func (a *actor[S, M]) State() S {
