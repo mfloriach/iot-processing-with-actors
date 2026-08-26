@@ -5,6 +5,7 @@ import (
 )
 
 type DeviceActor interface {
+	GetID() string
 	Send(Message)
 	State() DeviceState
 	Update()
@@ -30,17 +31,20 @@ func NewDeviceManager(numShards int) DeviceManager {
 	}
 }
 
-func (m DeviceManager) Add(id string, device DeviceActor) {
+func (m DeviceManager) Add(device DeviceActor) {
+	id := device.GetID()
+
 	m.getShard(id).devices[id] = device
 }
 
-func (m DeviceManager) State(id string) DeviceState {
-	return m.getShard(id).devices[id].State()
+func (m DeviceManager) GetDevice(id string) DeviceActor {
+	return m.getShard(id).devices[id]
 }
 
-func (m DeviceManager) Send(id string, task Message) {
-	device := m.getShard(id).devices[id]
+func (m DeviceManager) Send(task Message) {
+	id := task.GetDeviceID()
 
+	device := m.getShard(id).devices[id]
 	device.Send(task)
 
 	m.getShard(id).ready <- device

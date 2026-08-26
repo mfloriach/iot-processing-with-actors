@@ -41,3 +41,7 @@ func (a *actor[S, M]) Send(msg M) {
 func (a *actor[S, M]) State() S {
 	return a.snapshot.Load().(S)
 }
+
+func (a *actor[S, M]) GetID() string {
+	return a.id
+}
