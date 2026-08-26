@@ -31,11 +31,9 @@ func (m Telemetry) GetDeviceID() string {
 
 func (m Telemetry) Apply(state *DeviceState) {
 	elapsed := time.Since(m.TTL)
-	slog.Info("telemetry processed", "lag", elapsed)
-
-	slog.Info("TTL progress",
-		"elapsed", elapsed,
-	)
+	if elapsed > time.Second {
+		slog.Info("telemetry processed", "lag", elapsed)
+	}
 
 	state.Data = m
 	state.Online = true

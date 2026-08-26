@@ -13,15 +13,15 @@ func NewInjestorRandom() InjestorRandom {
 	return InjestorRandom{}
 }
 
-func (i InjestorRandom) Run() iter.Seq[device.Message] {
+func (i InjestorRandom) Run(id string, duration time.Duration) iter.Seq[device.Message] {
 	return func(yield func(device.Message) bool) {
-		ticker := time.NewTicker(time.Second)
+		ticker := time.NewTicker(duration)
 		defer ticker.Stop()
 
 		for range ticker.C {
 			ok := yield(device.Telemetry{
 				Sample: device.Sample{
-					DeviceID: "sensor-001",
+					DeviceID: id,
 					TTL:      time.Now(),
 				},
 

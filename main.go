@@ -3,6 +3,7 @@ package main
 import (
 	"log/slog"
 	"os"
+	"time"
 
 	"datacollector/device"
 	"datacollector/injestor"
@@ -31,7 +32,28 @@ func main() {
 
 	go func() {
 		injestor := injestor.NewInjestorRandom()
-		for t := range injestor.Run() {
+		for t := range injestor.Run("sensor-000", time.Second) {
+			manager.Send(t)
+		}
+	}()
+
+	go func() {
+		injestor := injestor.NewInjestorRandom()
+		for t := range injestor.Run("sensor-001", time.Millisecond) {
+			manager.Send(t)
+		}
+	}()
+
+	go func() {
+		injestor := injestor.NewInjestorRandom()
+		for t := range injestor.Run("sensor-002", time.Millisecond) {
+			manager.Send(t)
+		}
+	}()
+
+	go func() {
+		injestor := injestor.NewInjestorRandom()
+		for t := range injestor.Run("sensor-003", time.Millisecond) {
 			manager.Send(t)
 		}
 	}()
