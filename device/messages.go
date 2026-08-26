@@ -30,7 +30,8 @@ func (m Telemetry) GetDeviceID() string {
 }
 
 func (m Telemetry) Apply(state *DeviceState) {
-	elapsed := time.Since(state.Data.TTL)
+	elapsed := time.Since(m.TTL)
+	slog.Info("telemetry processed", "lag", elapsed)
 
 	slog.Info("TTL progress",
 		"elapsed", elapsed,
