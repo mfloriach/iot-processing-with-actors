@@ -7,9 +7,13 @@ import (
 	"time"
 )
 
+type Injestor interface {
+	Run(string, time.Duration) iter.Seq[device.Message]
+}
+
 type InjestorRandom struct{}
 
-func NewInjestorRandom() InjestorRandom {
+func NewInjestorRandom() Injestor {
 	return InjestorRandom{}
 }
 

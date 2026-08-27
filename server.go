@@ -32,7 +32,7 @@ func eventsHandler(manager *device.DeviceManager) http.HandlerFunc {
 				return
 
 			case _ = <-ticker.C:
-				state := manager.GetDevice("sensor-001").State()
+				state := manager.GetDevice("sensor-1").State()
 				jsonData, err := json.Marshal(state)
 				if err != nil {
 					slog.Error("Error marshaling to JSON", slog.Any("error", err))

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"sync"
 	"sync/atomic"
 )
 
@@ -10,7 +9,6 @@ type actor[S any, M any] struct {
 	mailbox  chan M
 	snapshot atomic.Value
 	dispatch func(*S, M)
-	mu       sync.Mutex
 	queued   bool
 }
 
@@ -19,6 +17,7 @@ func NewActor[S any, M any](id string, initial S, dispatch func(*S, M)) *actor[S
 		id:       id,
 		mailbox:  make(chan M, 100),
 		dispatch: dispatch,
+		queued:   false,
 	}
 
 	actor.snapshot.Store(initial)
@@ -26,19 +25,25 @@ func NewActor[S any, M any](id string, initial S, dispatch func(*S, M)) *actor[S
 	return actor
 }
 
-func (a *actor[S, M]) Update() bool {
-	msg := <-a.mailbox
+func (a *actor[S, M]) Update(quantum int) bool {
+	for range quantum {
+		select {
+		case msg := <-a.mailbox:
 
-	state := a.snapshot.Load().(S)
-	a.dispatch(&state, msg)
-	a.snapshot.Store(state)
+			state := a.snapshot.Load().(S)
+			a.dispatch(&state, msg)
+			a.snapshot.Store(state)
 
-	a.mu.Lock()
-	defer a.mu.Unlock()
+			if len(a.mailbox) == 0 {
+				a.queued = false
+				return false
+			}
 
-	if len(a.mailbox) == 0 {
-		a.queued = false
-		return false
+			return true
+
+		default:
+			return false
+		}
 	}
 
 	return true
@@ -46,9 +51,6 @@ func (a *actor[S, M]) Update() bool {
 
 func (a *actor[S, M]) Send(msg M) bool {
 	a.mailbox <- msg
-
-	a.mu.Lock()
-	defer a.mu.Unlock()
 
 	if a.queued {
 		return false
