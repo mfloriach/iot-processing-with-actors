@@ -4,7 +4,6 @@ import (
 	"log/slog"
 	"os"
 	"strconv"
-	"time"
 
 	"datacollector/device"
 	"datacollector/injestor"
@@ -26,34 +25,9 @@ func main() {
 		manager.Add(NewActor(id, device.DeviceState{}, device.Dispatch))
 	}
 
-	sched := scheduler.NewScheduler(4)
-	go sched.Run(manager)
-
 	injestor := injestor.NewInjestorRandom()
-
-	go func() {
-		for t := range injestor.Run("sensor-0", time.Second) {
-			manager.Send(t)
-		}
-	}()
-
-	go func() {
-		for t := range injestor.Run("sensor-1", time.Millisecond) {
-			manager.Send(t)
-		}
-	}()
-
-	go func() {
-		for t := range injestor.Run("sensor-2", time.Millisecond) {
-			manager.Send(t)
-		}
-	}()
-
-	go func() {
-		for t := range injestor.Run("sensor-3", time.Millisecond) {
-			manager.Send(t)
-		}
-	}()
+	sched := scheduler.NewScheduler(manager, injestor)
+	go sched.Run()
 
 	StartServer(manager)
 }

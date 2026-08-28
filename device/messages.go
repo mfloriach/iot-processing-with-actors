@@ -14,6 +14,7 @@ type Message interface {
 type Sample struct {
 	DeviceID string
 	TTL      time.Time `json:"-"`
+	Data     []byte
 }
 
 type Telemetry struct {
@@ -31,6 +32,9 @@ func (m Telemetry) GetDeviceID() string {
 
 func (m Telemetry) Apply(state *DeviceState) {
 	elapsed := time.Since(m.TTL)
+	if m.Sample.DeviceID == "sensor-0" {
+		slog.Info("telemetry processed", "lag", elapsed)
+	}
 	if elapsed > time.Second {
 		slog.Info("telemetry processed", "lag", elapsed)
 	}
