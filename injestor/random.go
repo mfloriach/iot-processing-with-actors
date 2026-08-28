@@ -23,16 +23,17 @@ func (i InjestorRandom) Run(id string, duration time.Duration) iter.Seq[device.M
 		defer ticker.Stop()
 
 		for range ticker.C {
+			r := rand.New(rand.NewSource(time.Now().UnixNano()))
 			ok := yield(device.Telemetry{
 				Sample: device.Sample{
 					DeviceID: id,
 					TTL:      time.Now(),
 				},
 
-				Temperature: randomNumber(50),
-				Humidity:    randomNumber(70),
-				Battery:     randomNumber(100),
-				Noise:       randomNumber(20),
+				Temperature: float64(r.Intn(101)),
+				Humidity:    float64(r.Intn(71)),
+				Battery:     float64(r.Intn(101)),
+				Noise:       float64(r.Intn(21)),
 			})
 
 			if !ok {
@@ -40,8 +41,4 @@ func (i InjestorRandom) Run(id string, duration time.Duration) iter.Seq[device.M
 			}
 		}
 	}
-}
-
-func randomNumber(max int) float64 {
-	return float64(rand.Intn(max + 1))
 }

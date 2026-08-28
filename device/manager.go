@@ -13,10 +13,10 @@ type DeviceManager struct {
 	quantum int
 }
 
-func NewDeviceManager(numShards int, quantum int) DeviceManager {
+func NewDeviceManager(quantum int) DeviceManager {
 	return DeviceManager{
 		devices: make(map[string]DeviceActor),
-		ready:   make(chan DeviceActor),
+		ready:   make(chan DeviceActor, 1000),
 		quantum: quantum,
 	}
 }
