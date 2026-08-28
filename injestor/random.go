@@ -17,16 +17,20 @@ func NewInjestorRandom() Injestor {
 	return InjestorRandom{}
 }
 
-func (i InjestorRandom) Run(id string, duration time.Duration) iter.Seq[device.Message] {
+func (i InjestorRandom) Run(
+	deviceID string,
+	interval time.Duration,
+) iter.Seq[device.Message] {
+
 	return func(yield func(device.Message) bool) {
-		ticker := time.NewTicker(duration)
+		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
 
 		for range ticker.C {
 			r := rand.New(rand.NewSource(time.Now().UnixNano()))
 			ok := yield(device.Telemetry{
 				Sample: device.Sample{
-					DeviceID: id,
+					DeviceID: deviceID,
 					TTL:      time.Now(),
 				},
 

@@ -58,37 +58,9 @@ func main() {
 	for {
 		select {
 		case <-ticker.C:
-			p50, p90, p99 := mesures.Stats.Percentiles()
-			runtime.ReadMemStats(&m)
-			g := mesures.Generated.Swap(0)
-			p := mesures.Processed.Swap(0)
-
-			backlog := int64(g) - int64(p)
-			if backlog < 0 {
-				backlog = 0
-			}
-
-			slog.Info(
-				"telemetry processed",
-				"p50", p50,
-				"p90", p90,
-				"p99", p99,
-				"generated", g,
-				"processed", p,
-				"backlog", backlog,
-				"garbage", m.NumGC,
-			)
+			mesures.Stats.PrintResults(m)
 		case <-timeout:
-			p50, p90, p99 := mesures.Stats.Percentiles()
-			runtime.ReadMemStats(&m)
-
-			slog.Info(
-				"telemetry processed",
-				"p50", p50,
-				"p90", p90,
-				"p99", p99,
-				"garbage", m.NumGC,
-			)
+			mesures.Stats.PrintResults(m)
 
 			fmt.Println("Time is up! Stopping execution.")
 			return
