@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"datacollector/device"
 	"encoding/json"
 	"log"
@@ -21,8 +22,17 @@ func eventsHandler(manager *device.DeviceManager) http.HandlerFunc {
 			return
 		}
 
+		device := manager.GetDevice("sensor-1")
+		if device == nil {
+			http.Error(w, "device not found", http.StatusNotFound)
+			return
+		}
+
 		ticker := time.NewTicker(time.Second)
 		defer ticker.Stop()
+
+		var frame bytes.Buffer
+		encoder := json.NewEncoder(&frame)
 
 		for {
 			select {
@@ -30,16 +40,22 @@ func eventsHandler(manager *device.DeviceManager) http.HandlerFunc {
 				log.Println("client disconnected")
 				return
 
-			case _ = <-ticker.C:
-				state := manager.GetDevice("sensor-1").State()
-				jsonData, err := json.Marshal(state)
-				if err != nil {
+			case <-ticker.C:
+				frame.Reset()
+				frame.Grow(128)
+				frame.WriteString("data: ")
+
+				if err := encoder.Encode(device.State()); err != nil {
 					slog.Error("Error marshaling to JSON", slog.Any("error", err))
+					continue
 				}
 
-				w.Write([]byte("data: "))
-				w.Write(jsonData)
-				w.Write([]byte("\n\n"))
+				frame.WriteByte('\n')
+
+				if _, err := w.Write(frame.Bytes()); err != nil {
+					slog.Error("Error writing SSE frame", slog.Any("error", err))
+					return
+				}
 
 				flusher.Flush()
 			}
