@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -12,6 +11,7 @@ import (
 
 	"datacollector/device"
 	"datacollector/injestor"
+	"datacollector/mesures"
 	"datacollector/scheduler"
 
 	spretty "github.com/mickamy/slog-pretty"
@@ -20,8 +20,11 @@ import (
 func main() {
 	var m runtime.MemStats
 
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer cancel()
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	// Timeout after 5 minutes
+	timeout := time.After(5 * time.Minute)
 
 	logger := slog.New(spretty.NewHandler(os.Stdout, &spretty.HandlerOptions{
 		Level:     slog.LevelDebug,
@@ -54,17 +57,42 @@ func main() {
 
 	for {
 		select {
-		case <-ctx.Done():
-			// Read the current memory statistics
+		case <-ticker.C:
+			p50, p90, p99 := mesures.Stats.Percentiles()
+			runtime.ReadMemStats(&m)
+			g := mesures.Generated.Swap(0)
+			p := mesures.Processed.Swap(0)
+
+			backlog := int64(g) - int64(p)
+			if backlog < 0 {
+				backlog = 0
+			}
+
+			slog.Info(
+				"telemetry processed",
+				"p50", p50,
+				"p90", p90,
+				"p99", p99,
+				"generated", g,
+				"processed", p,
+				"backlog", backlog,
+				"garbage", m.NumGC,
+			)
+		case <-timeout:
+			p50, p90, p99 := mesures.Stats.Percentiles()
 			runtime.ReadMemStats(&m)
 
-			// m.NumGC holds the total number of completed GC cycles
-			fmt.Printf("The GC has triggered %d times.\n", m.NumGC)
+			slog.Info(
+				"telemetry processed",
+				"p50", p50,
+				"p90", p90,
+				"p99", p99,
+				"garbage", m.NumGC,
+			)
+
 			fmt.Println("Time is up! Stopping execution.")
 			return
 		default:
-			// Place your working code here
-			fmt.Println("Doing work...")
 			time.Sleep(5 * time.Second) // Simulating work
 		}
 	}

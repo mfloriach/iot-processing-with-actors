@@ -1,6 +1,7 @@
 package device
 
 import (
+	"datacollector/mesures"
 	"fmt"
 	"log/slog"
 	"time"
@@ -32,12 +33,7 @@ func (m Telemetry) GetDeviceID() string {
 
 func (m Telemetry) Apply(state *DeviceState) {
 	elapsed := time.Since(m.TTL)
-	if m.Sample.DeviceID == "sensor-0" {
-		slog.Info("telemetry processed", "lag", elapsed)
-	}
-	if elapsed > time.Second {
-		slog.Info("telemetry processed", "lag", elapsed)
-	}
+	mesures.Stats.Add(elapsed)
 
 	state.Data = m
 	state.Online = true

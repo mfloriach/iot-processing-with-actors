@@ -3,13 +3,14 @@ package scheduler
 import (
 	"datacollector/device"
 	"datacollector/injestor"
+	"datacollector/mesures"
 	"strconv"
 	"sync"
 	"time"
 )
 
 const (
-	REQUEST_PER_SECOND_NOISE       = 120000
+	REQUEST_PER_SECOND_NOISE       = 120_000
 	NUM_OF_WORKERS_UPDATING        = 4
 	NUM_OF_WORKERS_GENERETIC_NOISE = 5
 
@@ -57,6 +58,7 @@ func (s Scheduler) receiveNoise(packetsPerSecond int) {
 
 		go func(deviceID string) {
 			for t := range s.injestor.Run(deviceID, interval) {
+				mesures.Generated.Add(1)
 				s.manager.Send(t)
 			}
 		}("sensor-" + id)
@@ -66,6 +68,7 @@ func (s Scheduler) receiveNoise(packetsPerSecond int) {
 func (s Scheduler) receiveAnalysis(sensorID string) {
 	go func() {
 		for t := range s.injestor.Run(sensorID, time.Second) {
+			mesures.Generated.Add(1)
 			s.manager.Send(t)
 		}
 	}()

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"datacollector/mesures"
 	"sync/atomic"
 )
 
@@ -29,7 +30,7 @@ func (a *actor[S, M]) Update(quantum int) bool {
 	for range quantum {
 		select {
 		case msg := <-a.mailbox:
-
+			mesures.Processed.Add(1)
 			state := a.snapshot.Load().(S)
 			a.dispatch(&state, msg)
 			a.snapshot.Store(state)
