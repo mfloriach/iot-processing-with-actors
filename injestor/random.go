@@ -8,7 +8,7 @@ import (
 )
 
 type Injestor interface {
-	Run(string, time.Duration) iter.Seq[device.Message]
+	Run(string, time.Duration, *rand.Rand) iter.Seq[device.Telemetry]
 }
 
 type InjestorRandom struct{}
@@ -20,14 +20,14 @@ func NewInjestorRandom() Injestor {
 func (i InjestorRandom) Run(
 	deviceID string,
 	interval time.Duration,
-) iter.Seq[device.Message] {
-
-	return func(yield func(device.Message) bool) {
+	r *rand.Rand,
+) iter.Seq[device.Telemetry] {
+	return func(yield func(device.Telemetry) bool) {
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
 
 		for range ticker.C {
-			r := rand.New(rand.NewSource(time.Now().UnixNano()))
+
 			ok := yield(device.Telemetry{
 				Sample: device.Sample{
 					DeviceID: deviceID,

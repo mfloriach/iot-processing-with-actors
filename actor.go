@@ -1,48 +1,40 @@
 package main
 
 import (
+	"datacollector/device"
 	"datacollector/mesures"
-	"sync/atomic"
 )
 
-type actor[S any, M any] struct {
+type actor struct {
 	id       string
-	mailbox  chan M
-	snapshot atomic.Value
-	dispatch func(*S, M)
+	mailbox  chan device.Telemetry
+	state    device.DeviceState
+	dispatch func(*device.DeviceState, device.Telemetry)
 	queued   bool
 }
 
-func NewActor[S any, M any](id string, initial S, dispatch func(*S, M)) *actor[S, M] {
-	actor := &actor[S, M]{
+func NewActor(id string, initial device.DeviceState, dispatch func(*device.DeviceState, device.Telemetry)) *actor {
+	actor := &actor{
 		id:       id,
-		mailbox:  make(chan M, 100),
+		mailbox:  make(chan device.Telemetry, 5),
 		dispatch: dispatch,
 		queued:   false,
+		state:    device.DeviceState{},
 	}
-
-	actor.snapshot.Store(initial)
 
 	return actor
 }
 
-func (a *actor[S, M]) Update(quantum int) bool {
+func (a *actor) Update(quantum int) bool {
 	for range quantum {
 		select {
 		case msg := <-a.mailbox:
 			mesures.Processed.Add(1)
-			state := a.snapshot.Load().(S)
-			a.dispatch(&state, msg)
-			a.snapshot.Store(state)
 
-			if len(a.mailbox) == 0 {
-				a.queued = false
-				return false
-			}
-
-			return true
+			a.dispatch(&a.state, msg)
 
 		default:
+			a.queued = false
 			return false
 		}
 	}
@@ -50,7 +42,7 @@ func (a *actor[S, M]) Update(quantum int) bool {
 	return true
 }
 
-func (a *actor[S, M]) Send(msg M) bool {
+func (a *actor) Send(msg device.Telemetry) bool {
 	a.mailbox <- msg
 
 	if a.queued {
@@ -61,10 +53,10 @@ func (a *actor[S, M]) Send(msg M) bool {
 	return true
 }
 
-func (a *actor[S, M]) State() S {
-	return a.snapshot.Load().(S)
+func (a *actor) State() device.DeviceState {
+	return a.state
 }
 
-func (a *actor[S, M]) GetID() string {
+func (a *actor) GetID() string {
 	return a.id
 }

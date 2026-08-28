@@ -2,7 +2,7 @@ package device
 
 type DeviceActor interface {
 	GetID() string
-	Send(Message) bool
+	Send(Telemetry) bool
 	State() DeviceState
 	Update(int) bool
 }
@@ -31,7 +31,7 @@ func (m DeviceManager) GetDevice(id string) DeviceActor {
 	return m.devices[id]
 }
 
-func (m DeviceManager) Send(task Message) {
+func (m DeviceManager) Send(task Telemetry) {
 	id := task.GetDeviceID()
 
 	device := m.devices[id]

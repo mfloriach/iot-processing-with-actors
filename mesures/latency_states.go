@@ -1,11 +1,9 @@
 package mesures
 
 import (
-	"fmt"
 	"log/slog"
+	"math"
 	"runtime"
-	"sort"
-	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -17,51 +15,102 @@ var (
 )
 
 type LatencyStats struct {
-	mu      sync.Mutex
-	samples []time.Duration
+	buckets     [64]atomic.Uint64
+	PrevMallocs uint64
 }
 
+// Add registra una latencia.
+// Cada bucket representa un rango de latencia.
 func (s *LatencyStats) Add(d time.Duration) {
-	s.mu.Lock()
-	if d > time.Second {
-		fmt.Println("out of time")
+	if d < 0 {
+		return
 	}
-	s.samples = append(s.samples, d)
-	s.mu.Unlock()
+
+	// Convertimos a nanosegundos.
+	ns := uint64(d)
+
+	// Bucket logarítmico.
+	var bucket int
+
+	for ns > 0 {
+		bucket++
+		ns >>= 1
+	}
+
+	if bucket >= len(s.buckets) {
+		bucket = len(s.buckets) - 1
+	}
+
+	s.buckets[bucket].Add(1)
 }
 
-func (s *LatencyStats) Percentiles() (p50, p90, p99 time.Duration) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *LatencyStats) Percentiles() (
+	p50, p90, p99 time.Duration,
+) {
+	total := uint64(0)
 
-	if len(s.samples) == 0 {
+	for i := range s.buckets {
+		total += s.buckets[i].Load()
+	}
+
+	if total == 0 {
 		return 0, 0, 0
 	}
 
-	values := append([]time.Duration(nil), s.samples...)
-	sort.Slice(values, func(i, j int) bool {
-		return values[i] < values[j]
-	})
+	p50 = s.percentile(total, 0.50)
+	p90 = s.percentile(total, 0.90)
+	p99 = s.percentile(total, 0.99)
 
-	percentile := func(p float64) time.Duration {
-		index := int(float64(len(values)-1) * p)
-		return values[index]
+	return
+}
+
+func (s *LatencyStats) percentile(
+	total uint64,
+	percent float64,
+) time.Duration {
+
+	target := uint64(float64(total-1) * percent)
+
+	var count uint64
+
+	for i := range s.buckets {
+		count += s.buckets[i].Load()
+
+		if count > target {
+			// El bucket representa aproximadamente:
+			// [2^(i-1), 2^i)
+			if i == 0 {
+				return 0
+			}
+
+			return time.Duration(uint64(1) << (i - 1))
+		}
 	}
 
-	return percentile(0.50),
-		percentile(0.90),
-		percentile(0.99)
+	return time.Duration(math.MaxInt64)
+}
+
+func (s *LatencyStats) Reset() {
+	for i := range s.buckets {
+		s.buckets[i].Store(0)
+	}
 }
 
 func (s *LatencyStats) PrintResults(m runtime.MemStats) {
 	p50, p90, p99 := s.Percentiles()
+
 	runtime.ReadMemStats(&m)
+
 	g := Generated.Swap(0)
 	p := Processed.Swap(0)
 
-	backlog := int64(g) - int64(p)
-	if backlog < 0 {
-		backlog = 0
+	mallocsDelta := m.Mallocs - s.PrevMallocs
+	s.PrevMallocs = m.Mallocs
+
+	var backlog uint64
+
+	if g > p {
+		backlog = g - p
 	}
 
 	slog.Info(
@@ -69,15 +118,22 @@ func (s *LatencyStats) PrintResults(m runtime.MemStats) {
 		"p50", p50,
 		"p90", p90,
 		"p99", p99,
+
 		"generated", g/30,
 		"processed", p/30,
 		"backlog", backlog,
+
 		"gc", m.NumGC,
 		"gc_cpu", m.GCCPUFraction,
+
 		"heap_mb", m.HeapAlloc/1024/1024,
 		"heap_objects", m.HeapObjects,
+
 		"total_alloc_mb", m.TotalAlloc/1024/1024,
 		"mallocs", m.Mallocs,
 		"frees", m.Frees,
+		"allocs_per_message", math.Round(float64(mallocsDelta)/float64(g)),
 	)
+
+	s.Reset()
 }

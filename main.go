@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"runtime"
-	"runtime/trace"
 	"strconv"
 	"time"
 
@@ -14,11 +14,22 @@ import (
 	"datacollector/mesures"
 	"datacollector/scheduler"
 
+	_ "net/http/pprof"
+
 	spretty "github.com/mickamy/slog-pretty"
 )
 
 func main() {
+	runtime.GOMAXPROCS(1)
 	var m runtime.MemStats
+
+	go func() {
+		slog.Error(
+			"pprof",
+			"error",
+			http.ListenAndServe("localhost:6060", nil),
+		)
+	}()
 
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
@@ -31,17 +42,6 @@ func main() {
 		AddSource: true,
 	}))
 	slog.SetDefault(logger)
-
-	f, err := os.Create("trace.out")
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-
-	if err := trace.Start(f); err != nil {
-		panic(err)
-	}
-	defer trace.Stop()
 
 	manager := device.NewDeviceManager(30)
 	for i := range 1000 {

@@ -7,15 +7,14 @@ import (
 	"time"
 )
 
-type Message interface {
-	GetDeviceID() string
-	Apply(*DeviceState)
-}
+// type Message interface {
+// 	GetDeviceID() string
+// 	Apply(*DeviceState)
+// }
 
 type Sample struct {
 	DeviceID string
 	TTL      time.Time `json:"-"`
-	Data     []byte
 }
 
 type Telemetry struct {

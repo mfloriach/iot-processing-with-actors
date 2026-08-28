@@ -5,12 +5,13 @@ import (
 	"datacollector/injestor"
 	"datacollector/mesures"
 	"fmt"
+	"math/rand"
 	"sync"
 	"time"
 )
 
 const (
-	REQUEST_PER_SECOND_NOISE = 120_000
+	REQUEST_PER_SECOND_NOISE = 3_500_000
 	MAX_REQUEST_PER_WORKER   = 12_000
 
 	NUM_OF_WORKERS_UPDATING        = 10
@@ -58,22 +59,23 @@ func (s Scheduler) receiveNoise(packetsPerSecond int) {
 	}
 
 	for i := 1; i <= num_workers; i++ {
-		deviceID := fmt.Sprintf("sensor-%d", i)
-
-		go func(deviceID string) {
-			for t := range s.injestor.Run(deviceID, time.Second/MAX_REQUEST_PER_WORKER) {
+		go func() {
+			deviceID := fmt.Sprintf("sensor-%d", i)
+			r := rand.New(rand.NewSource(time.Now().UnixNano()))
+			for d := range s.injestor.Run(deviceID, time.Second/MAX_REQUEST_PER_WORKER, r) {
 				mesures.Generated.Add(1)
-				s.manager.Send(t)
+				s.manager.Send(d)
 			}
-		}(deviceID)
+		}()
 	}
 }
 
 func (s Scheduler) receiveAnalysis(sensorID string) {
 	go func() {
-		for t := range s.injestor.Run(sensorID, time.Second) {
+		r := rand.New(rand.NewSource(time.Now().UnixNano()))
+		for d := range s.injestor.Run(sensorID, time.Second, r) {
 			mesures.Generated.Add(1)
-			s.manager.Send(t)
+			s.manager.Send(d)
 		}
 	}()
 }
