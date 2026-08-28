@@ -3,7 +3,6 @@ package main
 import (
 	"datacollector/device"
 	"encoding/json"
-	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
@@ -38,7 +37,9 @@ func eventsHandler(manager *device.DeviceManager) http.HandlerFunc {
 					slog.Error("Error marshaling to JSON", slog.Any("error", err))
 				}
 
-				fmt.Fprintf(w, "data: %s\n\n", string(jsonData))
+				w.Write([]byte("data: "))
+				w.Write(jsonData)
+				w.Write([]byte("\n\n"))
 
 				flusher.Flush()
 			}

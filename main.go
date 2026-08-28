@@ -3,6 +3,7 @@ package main
 import (
 	"log/slog"
 	"os"
+	"runtime/trace"
 	"strconv"
 
 	"datacollector/device"
@@ -18,6 +19,17 @@ func main() {
 		AddSource: true,
 	}))
 	slog.SetDefault(logger)
+
+	f, err := os.Create("trace.out")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	if err := trace.Start(f); err != nil {
+		panic(err)
+	}
+	defer trace.Stop()
 
 	manager := device.NewDeviceManager(4, 30)
 	for i := range 1000 {
