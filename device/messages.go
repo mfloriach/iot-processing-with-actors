@@ -2,15 +2,8 @@ package device
 
 import (
 	"datacollector/mesures"
-	"fmt"
-	"log/slog"
 	"time"
 )
-
-// type Message interface {
-// 	GetDeviceID() string
-// 	Apply(*DeviceState)
-// }
 
 type Sample struct {
 	DeviceID string
@@ -36,34 +29,4 @@ func (m Telemetry) Apply(state *DeviceState) {
 
 	elapsed := time.Since(m.TTL)
 	mesures.Stats.Add(elapsed)
-}
-
-type Shutdown struct{}
-
-func (m Shutdown) Apply(state *DeviceState) {
-	slog.Info("shouting down the device ...")
-}
-
-type SetBattery struct {
-	Sample
-
-	Battery float64
-}
-
-func (m SetBattery) Apply(state *DeviceState) {
-	state.Data.Battery = m.Battery
-}
-
-type SetAlarm struct {
-	Sample
-
-	Value float64
-}
-
-func (m SetAlarm) GetDeviceID() string {
-	return m.DeviceID
-}
-
-func (m SetAlarm) Apply(state *DeviceState) {
-	fmt.Println("Alarm triggered.....")
 }

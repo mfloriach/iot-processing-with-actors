@@ -2,6 +2,9 @@ package mesures
 
 import (
 	"datacollector/config"
+	"net/http"
+	// "datacollector/mesures"
+	"fmt"
 	"log/slog"
 	"math"
 	"runtime"
@@ -10,14 +13,54 @@ import (
 )
 
 var (
-	Stats     LatencyStats
-	Generated atomic.Uint64
-	Processed atomic.Uint64
+	Stats LatencyStats
 )
 
 type LatencyStats struct {
 	buckets     [64]atomic.Uint64
 	PrevMallocs uint64
+	generated   atomic.Uint64
+	processed   atomic.Uint64
+}
+
+func NewLatencyStats() {
+	runtime.GOMAXPROCS(config.NUM_CPUS)
+
+	Stats = LatencyStats{}
+
+	go func() {
+		slog.Error(
+			"pprof",
+			"error",
+			http.ListenAndServe("localhost:6060", nil),
+		)
+	}()
+}
+
+func (s *LatencyStats) Run() {
+	var m runtime.MemStats
+
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+	timeout := time.After(5 * time.Minute)
+
+	for {
+		select {
+		case <-ticker.C:
+			Stats.PrintResults(m)
+		case <-timeout:
+			Stats.PrintResults(m)
+
+			fmt.Println("Time is up! Stopping execution.")
+			return
+		default:
+			time.Sleep(5 * time.Second) // Simulating work
+		}
+	}
+}
+
+func (s *LatencyStats) AddGenerate() {
+	s.generated.Add(1)
 }
 
 // Add registra una latencia.
@@ -43,6 +86,7 @@ func (s *LatencyStats) Add(d time.Duration) {
 	}
 
 	s.buckets[bucket].Add(1)
+	s.processed.Add(1)
 }
 
 func (s *LatencyStats) Percentiles() (
@@ -102,8 +146,8 @@ func (s *LatencyStats) PrintResults(m runtime.MemStats) {
 
 	runtime.ReadMemStats(&m)
 
-	g := Generated.Swap(0)
-	p := Processed.Swap(0)
+	g := s.generated.Swap(0)
+	p := s.processed.Swap(0)
 
 	mallocsDelta := m.Mallocs - s.PrevMallocs
 	s.PrevMallocs = m.Mallocs

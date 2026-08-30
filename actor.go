@@ -2,7 +2,6 @@ package main
 
 import (
 	"datacollector/device"
-	"datacollector/mesures"
 )
 
 type actor struct {
@@ -13,7 +12,7 @@ type actor struct {
 	queued   bool
 }
 
-func NewActor(id string, initial device.DeviceState, dispatch func(*device.DeviceState, device.Telemetry)) *actor {
+func NewActor(id string, dispatch func(*device.DeviceState, device.Telemetry)) *actor {
 	actor := &actor{
 		id:       id,
 		mailbox:  make(chan device.Telemetry, 5),
@@ -29,10 +28,7 @@ func (a *actor) Update(quantum int) bool {
 	for range quantum {
 		select {
 		case msg := <-a.mailbox:
-			mesures.Processed.Add(1)
-
 			a.dispatch(&a.state, msg)
-
 		default:
 			a.queued = false
 			return false

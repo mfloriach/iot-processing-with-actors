@@ -34,7 +34,7 @@ func (m DeviceManager) GetDevice(id string) DeviceActor {
 }
 
 func (m DeviceManager) Send(task Telemetry) {
-	mesures.Generated.Add(1)
+	mesures.Stats.AddGenerate()
 	id := task.GetDeviceID()
 
 	device := m.devices[id]

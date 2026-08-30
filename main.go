@@ -1,15 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"log/slog"
-	"net/http"
 	"os"
-	"runtime"
 	"strconv"
-	"time"
 
-	"datacollector/config"
 	"datacollector/device"
 	"datacollector/injestor"
 	"datacollector/mesures"
@@ -21,33 +16,16 @@ import (
 )
 
 func main() {
-	runtime.GOMAXPROCS(config.NUM_CPUS)
-	var m runtime.MemStats
+	mesures.NewLatencyStats()
 
-	go func() {
-		slog.Error(
-			"pprof",
-			"error",
-			http.ListenAndServe("localhost:6060", nil),
-		)
-	}()
-
-	ticker := time.NewTicker(10 * time.Second)
-	defer ticker.Stop()
-
-	// Timeout after 5 minutes
-	timeout := time.After(5 * time.Minute)
-
-	logger := slog.New(spretty.NewHandler(os.Stdout, &spretty.HandlerOptions{
+	slog.SetDefault(slog.New(spretty.NewHandler(os.Stdout, &spretty.HandlerOptions{
 		Level:     slog.LevelDebug,
 		AddSource: true,
-	}))
-	slog.SetDefault(logger)
+	})))
 
 	manager := device.NewDeviceManager(30)
 	for i := range 10 {
-		id := "sensor-" + strconv.Itoa(i)
-		manager.Add(NewActor(id, device.DeviceState{}, device.Dispatch))
+		manager.Add(NewActor("sensor-"+strconv.Itoa(i), device.Dispatch))
 	}
 
 	injestor := injestor.NewInjestorRandom()
@@ -56,17 +34,5 @@ func main() {
 
 	go StartServer(manager)
 
-	for {
-		select {
-		case <-ticker.C:
-			mesures.Stats.PrintResults(m)
-		case <-timeout:
-			mesures.Stats.PrintResults(m)
-
-			fmt.Println("Time is up! Stopping execution.")
-			return
-		default:
-			time.Sleep(5 * time.Second) // Simulating work
-		}
-	}
+	mesures.Stats.Run()
 }
