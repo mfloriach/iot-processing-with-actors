@@ -1,6 +1,7 @@
 package mesures
 
 import (
+	"datacollector/config"
 	"log/slog"
 	"math"
 	"runtime"
@@ -119,8 +120,8 @@ func (s *LatencyStats) PrintResults(m runtime.MemStats) {
 		"p90", p90,
 		"p99", p99,
 
-		"generated", g/30,
-		"processed", p/30,
+		"generated_sec", g/30,
+		"processed_sec", p/30,
 		"backlog", backlog,
 
 		"gc", m.NumGC,
@@ -128,6 +129,10 @@ func (s *LatencyStats) PrintResults(m runtime.MemStats) {
 
 		"heap_mb", m.HeapAlloc/1024/1024,
 		"heap_objects", m.HeapObjects,
+
+		"num_cpus", config.NUM_CPUS,
+		"num_of_workers", config.NUM_OF_WORKERS_GENERETIC_NOISE,
+		"num_of_workers_updating", config.NUM_OF_WORKERS_UPDATING,
 
 		"total_alloc_mb", m.TotalAlloc/1024/1024,
 		"mallocs", m.Mallocs,

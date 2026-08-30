@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"datacollector/config"
 	"datacollector/device"
 	"datacollector/injestor"
 	"datacollector/mesures"
@@ -20,7 +21,7 @@ import (
 )
 
 func main() {
-	runtime.GOMAXPROCS(1)
+	runtime.GOMAXPROCS(config.NUM_CPUS)
 	var m runtime.MemStats
 
 	go func() {
@@ -31,7 +32,7 @@ func main() {
 		)
 	}()
 
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
 	// Timeout after 5 minutes
@@ -44,7 +45,7 @@ func main() {
 	slog.SetDefault(logger)
 
 	manager := device.NewDeviceManager(30)
-	for i := range 1000 {
+	for i := range 10 {
 		id := "sensor-" + strconv.Itoa(i)
 		manager.Add(NewActor(id, device.DeviceState{}, device.Dispatch))
 	}

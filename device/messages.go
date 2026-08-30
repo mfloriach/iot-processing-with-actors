@@ -31,11 +31,11 @@ func (m Telemetry) GetDeviceID() string {
 }
 
 func (m Telemetry) Apply(state *DeviceState) {
-	elapsed := time.Since(m.TTL)
-	mesures.Stats.Add(elapsed)
-
 	state.Data = m
 	state.Online = true
+
+	elapsed := time.Since(m.TTL)
+	mesures.Stats.Add(elapsed)
 }
 
 type Shutdown struct{}

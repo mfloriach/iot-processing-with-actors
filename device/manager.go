@@ -1,5 +1,7 @@
 package device
 
+import "datacollector/mesures"
+
 type DeviceActor interface {
 	GetID() string
 	Send(Telemetry) bool
@@ -15,8 +17,8 @@ type DeviceManager struct {
 
 func NewDeviceManager(quantum int) DeviceManager {
 	return DeviceManager{
-		devices: make(map[string]DeviceActor),
-		ready:   make(chan DeviceActor, 1000),
+		devices: make(map[string]DeviceActor, 50),
+		ready:   make(chan DeviceActor, 10),
 		quantum: quantum,
 	}
 }
@@ -32,6 +34,7 @@ func (m DeviceManager) GetDevice(id string) DeviceActor {
 }
 
 func (m DeviceManager) Send(task Telemetry) {
+	mesures.Generated.Add(1)
 	id := task.GetDeviceID()
 
 	device := m.devices[id]
