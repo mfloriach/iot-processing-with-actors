@@ -1,5 +1,7 @@
 package device
 
+import "iter"
+
 type DeviceActor interface {
 	GetID() string
 	Send(Telemetry) bool
@@ -19,7 +21,7 @@ func NewDeviceManager() DeviceManager {
 	}
 }
 
-func (m DeviceManager) Add(device DeviceActor) {
+func (m DeviceManager) AddDevice(device DeviceActor) {
 	id := device.GetID()
 
 	m.devices[id] = device
@@ -38,12 +40,20 @@ func (m DeviceManager) Send(task Telemetry) {
 	}
 }
 
-func (m DeviceManager) Process() {
-	for t := range m.ready {
-		// Requeue the actor while it still has work so one busy mailbox does not
-		// monopolize the shard and starve other devices.
-		if t.Update() {
-			m.ready <- t
+func (m DeviceManager) Next() iter.Seq[DeviceActor] {
+	return func(yield func(DeviceActor) bool) {
+		for t := range m.ready {
+			if !yield(t) {
+				break
+			}
 		}
+	}
+}
+
+func (m DeviceManager) ProcessOne(t DeviceActor) {
+	// Requeue the actor while it still has work so one busy mailbox does not
+	// monopolize the shard and starve other devices.
+	if t.Update() {
+		m.ready <- t
 	}
 }

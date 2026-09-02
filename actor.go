@@ -30,7 +30,6 @@ func NewActor(id string, dispatch func(*device.DeviceState, device.Telemetry)) *
 }
 
 func (a *actor) Update() bool {
-	// for range quantum {
 	select {
 	case msg := <-a.mailbox:
 		a.dispatch(&a.state, msg)
@@ -42,7 +41,6 @@ func (a *actor) Update() bool {
 		a.queued = false
 		return false
 	}
-	// }
 
 	return true
 }

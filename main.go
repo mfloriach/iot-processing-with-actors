@@ -25,7 +25,7 @@ func main() {
 
 	manager := device.NewDeviceManager()
 	for i := range 10 {
-		manager.Add(NewActor("sensor-"+strconv.Itoa(i), device.Dispatch))
+		manager.AddDevice(NewActor("sensor-"+strconv.Itoa(i), device.Dispatch))
 	}
 
 	injestor := injestor.NewInjestorRandom()

@@ -43,7 +43,11 @@ func (s Scheduler) updateStatus() {
 		go func() {
 			defer wg.Done()
 
-			s.manager.Process()
+			for d := range s.manager.Next() {
+				for range 10 {
+					s.manager.ProcessOne(d)
+				}
+			}
 		}()
 	}
 }
