@@ -2,11 +2,10 @@ package mesures
 
 import (
 	"datacollector/config"
-	"net/http"
-	// "datacollector/mesures"
 	"fmt"
 	"log/slog"
 	"math"
+	"net/http"
 	"runtime"
 	"sync/atomic"
 	"time"

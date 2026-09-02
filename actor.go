@@ -2,6 +2,8 @@ package main
 
 import (
 	"datacollector/device"
+	"datacollector/mesures"
+	"time"
 )
 
 type actor struct {
@@ -29,6 +31,8 @@ func (a *actor) Update(quantum int) bool {
 		select {
 		case msg := <-a.mailbox:
 			a.dispatch(&a.state, msg)
+			elapsed := time.Since(msg.TTL)
+			mesures.Stats.Add(elapsed)
 		default:
 			a.queued = false
 			return false
@@ -40,6 +44,7 @@ func (a *actor) Update(quantum int) bool {
 
 func (a *actor) Send(msg device.Telemetry) bool {
 	a.mailbox <- msg
+	mesures.Stats.AddGenerate()
 
 	if a.queued {
 		return false

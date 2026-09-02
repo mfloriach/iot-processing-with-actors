@@ -1,7 +1,5 @@
 package device
 
-import "datacollector/mesures"
-
 type DeviceActor interface {
 	GetID() string
 	Send(Telemetry) bool
@@ -34,7 +32,6 @@ func (m DeviceManager) GetDevice(id string) DeviceActor {
 }
 
 func (m DeviceManager) Send(task Telemetry) {
-	mesures.Stats.AddGenerate()
 	id := task.GetDeviceID()
 
 	device := m.devices[id]

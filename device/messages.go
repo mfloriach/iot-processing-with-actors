@@ -1,7 +1,6 @@
 package device
 
 import (
-	"datacollector/mesures"
 	"time"
 )
 
@@ -26,7 +25,4 @@ func (m Telemetry) GetDeviceID() string {
 func (m Telemetry) Apply(state *DeviceState) {
 	state.Data = m
 	state.Online = true
-
-	elapsed := time.Since(m.TTL)
-	mesures.Stats.Add(elapsed)
 }
