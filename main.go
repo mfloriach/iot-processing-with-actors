@@ -23,7 +23,7 @@ func main() {
 		AddSource: true,
 	})))
 
-	manager := device.NewDeviceManager(30)
+	manager := device.NewDeviceManager()
 	for i := range 10 {
 		manager.Add(NewActor("sensor-"+strconv.Itoa(i), device.Dispatch))
 	}

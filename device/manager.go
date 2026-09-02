@@ -4,20 +4,18 @@ type DeviceActor interface {
 	GetID() string
 	Send(Telemetry) bool
 	State() DeviceState
-	Update(int) bool
+	Update() bool
 }
 
 type DeviceManager struct {
 	devices map[string]DeviceActor
 	ready   chan DeviceActor
-	quantum int
 }
 
-func NewDeviceManager(quantum int) DeviceManager {
+func NewDeviceManager() DeviceManager {
 	return DeviceManager{
 		devices: make(map[string]DeviceActor, 50),
 		ready:   make(chan DeviceActor, 10),
-		quantum: quantum,
 	}
 }
 
@@ -44,7 +42,7 @@ func (m DeviceManager) Process() {
 	for t := range m.ready {
 		// Requeue the actor while it still has work so one busy mailbox does not
 		// monopolize the shard and starve other devices.
-		if t.Update(m.quantum) {
+		if t.Update() {
 			m.ready <- t
 		}
 	}

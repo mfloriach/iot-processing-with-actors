@@ -29,20 +29,20 @@ func NewActor(id string, dispatch func(*device.DeviceState, device.Telemetry)) *
 	return actor
 }
 
-func (a *actor) Update(quantum int) bool {
-	for range quantum {
-		select {
-		case msg := <-a.mailbox:
-			a.dispatch(&a.state, msg)
-			// Publish a consistent snapshot for lock-free readers.
-			a.snapshot.Store(a.state)
-			elapsed := time.Since(msg.TTL)
-			mesures.Stats.Add(elapsed)
-		default:
-			a.queued = false
-			return false
-		}
+func (a *actor) Update() bool {
+	// for range quantum {
+	select {
+	case msg := <-a.mailbox:
+		a.dispatch(&a.state, msg)
+		// Publish a consistent snapshot for lock-free readers.
+		a.snapshot.Store(a.state)
+		elapsed := time.Since(msg.TTL)
+		mesures.Stats.Add(elapsed)
+	default:
+		a.queued = false
+		return false
 	}
+	// }
 
 	return true
 }
