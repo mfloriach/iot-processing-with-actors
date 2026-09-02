@@ -3,6 +3,7 @@ package main
 import (
 	"datacollector/device"
 	"datacollector/mesures"
+	"sync/atomic"
 	"time"
 )
 
@@ -10,6 +11,7 @@ type actor struct {
 	id       string
 	mailbox  chan device.Telemetry
 	state    device.DeviceState
+	snapshot atomic.Value
 	dispatch func(*device.DeviceState, device.Telemetry)
 	queued   bool
 }
@@ -22,6 +24,7 @@ func NewActor(id string, dispatch func(*device.DeviceState, device.Telemetry)) *
 		queued:   false,
 		state:    device.DeviceState{},
 	}
+	actor.snapshot.Store(actor.state)
 
 	return actor
 }
@@ -31,6 +34,8 @@ func (a *actor) Update(quantum int) bool {
 		select {
 		case msg := <-a.mailbox:
 			a.dispatch(&a.state, msg)
+			// Publish a consistent snapshot for lock-free readers.
+			a.snapshot.Store(a.state)
 			elapsed := time.Since(msg.TTL)
 			mesures.Stats.Add(elapsed)
 		default:
@@ -55,7 +60,12 @@ func (a *actor) Send(msg device.Telemetry) bool {
 }
 
 func (a *actor) State() device.DeviceState {
-	return a.state
+	snapshot := a.snapshot.Load()
+	if snapshot == nil {
+		return device.DeviceState{}
+	}
+
+	return snapshot.(device.DeviceState)
 }
 
 func (a *actor) GetID() string {
