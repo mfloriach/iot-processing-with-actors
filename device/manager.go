@@ -50,10 +50,13 @@ func (m DeviceManager) Next() iter.Seq[DeviceActor] {
 	}
 }
 
-func (m DeviceManager) ProcessOne(t DeviceActor) {
+func (m DeviceManager) ProcessOne(t DeviceActor) (hasMore bool) {
 	// Requeue the actor while it still has work so one busy mailbox does not
 	// monopolize the shard and starve other devices.
 	if t.Update() {
 		m.ready <- t
+		return true
 	}
+
+	return false
 }

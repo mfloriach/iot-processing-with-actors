@@ -5,7 +5,6 @@ import (
 	"datacollector/injestor"
 	"fmt"
 	"math/rand"
-	"sync"
 	"time"
 )
 
@@ -35,18 +34,15 @@ func (s Scheduler) Run() {
 }
 
 func (s Scheduler) updateStatus() {
-	var wg sync.WaitGroup
-
 	for range NUM_OF_WORKERS_UPDATING {
-		wg.Add(1)
-
 		go func() {
-			defer wg.Done()
-
-			for d := range s.manager.Next() {
-				for range 10 {
-					s.manager.ProcessOne(d)
+			for {
+				for d := range s.manager.Next() {
+					if hasNext := s.manager.ProcessOne(d); !hasNext {
+						break
+					}
 				}
+				time.Sleep(time.Millisecond * 10)
 			}
 		}()
 	}
