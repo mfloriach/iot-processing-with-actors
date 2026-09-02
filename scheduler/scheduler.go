@@ -81,6 +81,5 @@ func (s Scheduler) receiveAnalysis(sensorID string) {
 
 			s.manager.Send(d)
 		}
-
 	}()
 }

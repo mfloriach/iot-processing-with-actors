@@ -21,8 +21,3 @@ type Telemetry struct {
 func (m Telemetry) GetDeviceID() string {
 	return m.DeviceID
 }
-
-func (m Telemetry) Apply(state *DeviceState) {
-	state.Data = m
-	state.Online = true
-}

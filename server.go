@@ -23,10 +23,10 @@ func eventsHandler(manager *device.DeviceManager) http.HandlerFunc {
 		}
 
 		device := manager.GetDevice("sensor-1")
-		if device == nil {
-			http.Error(w, "device not found", http.StatusNotFound)
-			return
-		}
+		// if device == nil {
+		// 	http.Error(w, "device not found", http.StatusNotFound)
+		// 	return
+		// }
 
 		ticker := time.NewTicker(time.Second)
 		defer ticker.Stop()
