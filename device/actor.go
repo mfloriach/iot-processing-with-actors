@@ -14,8 +14,7 @@ type DeviceState struct {
 type Actor struct {
 	id       string
 	mailbox  chan Telemetry
-	state    DeviceState
-	snapshot atomic.Value
+	snapshot atomic.Pointer[DeviceState]
 	queued   bool
 }
 
@@ -24,9 +23,8 @@ func NewActor(id string) *Actor {
 		id:      id,
 		mailbox: make(chan Telemetry, 5),
 		queued:  false,
-		state:   DeviceState{},
 	}
-	actor.snapshot.Store(actor.state)
+	actor.snapshot.Store(&DeviceState{})
 
 	return actor
 }
@@ -35,7 +33,7 @@ func (a *Actor) Update() bool {
 	select {
 	case msg := <-a.mailbox:
 		// Publish a consistent snapshot for lock-free readers.
-		a.snapshot.Store(DeviceState{
+		a.snapshot.Store(&DeviceState{
 			Data:   msg,
 			Online: true,
 		})
@@ -67,7 +65,7 @@ func (a *Actor) State() DeviceState {
 		return DeviceState{}
 	}
 
-	return snapshot.(DeviceState)
+	return *snapshot
 }
 
 func (a *Actor) GetID() string {
