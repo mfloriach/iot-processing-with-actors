@@ -1,6 +1,7 @@
 package device
 
 import (
+	"datacollector/config"
 	"datacollector/mesures"
 	"sync"
 	"sync/atomic"
@@ -28,7 +29,7 @@ type Actor struct {
 func NewActor(id string) *Actor {
 	actor := &Actor{
 		id:      id,
-		mailbox: make(chan Telemetry, 90_000),
+		mailbox: make(chan Telemetry, config.MAILBOX_SIZE),
 		queued:  false,
 	}
 	actor.snapshot.Store(&DeviceState{})

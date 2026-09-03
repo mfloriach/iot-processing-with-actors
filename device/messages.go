@@ -17,7 +17,3 @@ type Telemetry struct {
 	Battery     float64
 	Noise       float64
 }
-
-func (m Telemetry) GetDeviceID() string {
-	return m.DeviceID
-}

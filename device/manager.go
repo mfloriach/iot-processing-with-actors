@@ -1,6 +1,7 @@
 package device
 
 import (
+	"datacollector/config"
 	"datacollector/mesures"
 	"iter"
 	"time"
@@ -29,9 +30,7 @@ func (m DeviceManager) GetDevice(id string) *Actor {
 }
 
 func (m DeviceManager) Send(task Telemetry) {
-	id := task.GetDeviceID()
-
-	device := m.devices[id]
+	device := m.devices[task.DeviceID]
 	if device.Send(task) {
 		select {
 		case m.ready <- device:
@@ -57,7 +56,7 @@ func (m DeviceManager) Next() iter.Seq[*Actor] {
 func (m DeviceManager) ProcessOne(t *Actor) (hasMore bool) {
 	// Requeue the actor while it still has work so one busy mailbox does not
 	// monopolize the shard and starve other devices.
-	if t.Update(50) {
+	if t.Update(config.QUANTUM) {
 		select {
 		case m.ready <- t:
 		default:

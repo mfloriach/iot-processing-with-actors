@@ -23,8 +23,7 @@ It creates a large set of synthetic sensors, feeds them random telemetry, and ke
 From a clone of this repository:
 
 ```bash
-go test ./...
-go run .
+$ go run .
 ```
 
 The process starts the simulator, opens:
@@ -35,7 +34,7 @@ The process starts the simulator, opens:
 To watch the event stream:
 
 ```bash
-curl -N http://localhost:8080/events
+$ curl -N -H "Accept: text/event-stream" http://localhost:8080/events
 ```
 
 Expected output is a stream of `data:` frames containing JSON snapshots, for example:
@@ -78,7 +77,3 @@ This repository is still evolving. The current roadmap in `TODO.md` includes:
 - coalescing duplicate updates
 - rate limiting per device
 - deadline-aware scheduling
-
-## License
-
-No license file is currently present in the repository.
