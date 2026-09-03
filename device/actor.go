@@ -2,9 +2,16 @@ package device
 
 import (
 	"datacollector/mesures"
+	"sync"
 	"sync/atomic"
 	"time"
 )
+
+var statePool = sync.Pool{
+	New: func() any {
+		return new(DeviceState)
+	},
+}
 
 type DeviceState struct {
 	Data   Telemetry
@@ -32,11 +39,15 @@ func NewActor(id string) *Actor {
 func (a *Actor) Update() bool {
 	select {
 	case msg := <-a.mailbox:
+		state := statePool.Get().(*DeviceState)
+
+		state.Data = msg
+		state.Online = true
+
 		// Publish a consistent snapshot for lock-free readers.
-		a.snapshot.Store(&DeviceState{
-			Data:   msg,
-			Online: true,
-		})
+		oldState := a.snapshot.Swap(state)
+		statePool.Put(oldState)
+
 		elapsed := time.Since(msg.TTL)
 		mesures.Stats.Add(elapsed)
 	default:
@@ -59,13 +70,13 @@ func (a *Actor) Send(msg Telemetry) bool {
 	return true
 }
 
-func (a *Actor) State() DeviceState {
+func (a *Actor) State() *DeviceState {
 	snapshot := a.snapshot.Load()
 	if snapshot == nil {
-		return DeviceState{}
+		return &DeviceState{}
 	}
 
-	return *snapshot
+	return snapshot
 }
 
 func (a *Actor) GetID() string {
