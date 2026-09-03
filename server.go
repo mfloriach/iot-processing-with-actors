@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"datacollector/config"
 	"datacollector/device"
 	"encoding/json"
 	"log"
@@ -22,7 +23,7 @@ func eventsHandler(manager *device.DeviceManager) http.HandlerFunc {
 			return
 		}
 
-		device := manager.GetDevice("sensor-1")
+		device := manager.GetDevice(config.SENSOR_OF_ANALYSIS_ID)
 		if device == nil {
 			http.Error(w, "device not found", http.StatusNotFound)
 			return

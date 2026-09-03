@@ -1,8 +1,9 @@
 package device
 
 import (
+	"datacollector/mesures"
 	"iter"
-	"log/slog"
+	"time"
 )
 
 type DeviceManager struct {
@@ -35,14 +36,10 @@ func (m DeviceManager) Send(task Telemetry) {
 		select {
 		case m.ready <- device:
 		default:
-			// Mailbox is full.
-			slog.Debug("backpressure",
-				"queue", "ready",
-				"len", len(m.ready),
-				"cap", cap(m.ready),
-			)
-
+			// ready is full.
+			start := time.Now()
 			m.ready <- device
+			mesures.Stats.AddReadyBackpressure(time.Since(start))
 		}
 	}
 }
@@ -64,13 +61,10 @@ func (m DeviceManager) ProcessOne(t *Actor) (hasMore bool) {
 		select {
 		case m.ready <- t:
 		default:
-			// Mailbox is full.
-			slog.Debug("backpressure",
-				"queue", "ready",
-				"len", len(m.ready),
-				"cap", cap(m.ready),
-			)
+			// ready is full.
+			start := time.Now()
 			m.ready <- t
+			mesures.Stats.AddReadyBackpressure(time.Since(start))
 		}
 		return true
 	}

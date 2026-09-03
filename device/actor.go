@@ -28,7 +28,7 @@ type Actor struct {
 func NewActor(id string) *Actor {
 	actor := &Actor{
 		id:      id,
-		mailbox: make(chan Telemetry, 1_000_000),
+		mailbox: make(chan Telemetry, 90_000),
 		queued:  false,
 	}
 	actor.snapshot.Store(&DeviceState{})
@@ -66,14 +66,9 @@ func (a *Actor) Send(msg Telemetry) bool {
 		// Sent immediately.
 	default:
 		// Mailbox is full.
-		// slog.Debug("backpressure",
-		// 	"queue", "mailbox",
-		// 	"device", a.id,
-		// 	"len", len(a.mailbox),
-		// 	"cap", cap(a.mailbox),
-		// )
-
+		start := time.Now()
 		a.mailbox <- msg
+		mesures.Stats.AddMailboxBackpressure(time.Since(start))
 	}
 
 	mesures.Stats.AddGenerate()

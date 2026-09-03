@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 
+	"datacollector/config"
 	"datacollector/device"
 	"datacollector/injestor"
 	"datacollector/mesures"
@@ -24,7 +25,7 @@ func main() {
 	})))
 
 	manager := device.NewDeviceManager()
-	for i := range 10 {
+	for i := range config.NUM_OF_SENSORS {
 		manager.AddDevice(device.NewActor("sensor-" + strconv.Itoa(i)))
 	}
 

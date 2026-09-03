@@ -20,6 +20,11 @@ type LatencyStats struct {
 	PrevMallocs uint64
 	generated   atomic.Uint64
 	processed   atomic.Uint64
+
+	mailboxBackpressure      atomic.Int64
+	readyBackpressure        atomic.Int64
+	mailboxBackpressureCount atomic.Uint64
+	readyBackpressureCount   atomic.Uint64
 }
 
 func NewLatencyStats() {
@@ -60,6 +65,16 @@ func (s *LatencyStats) Run() {
 
 func (s *LatencyStats) AddGenerate() {
 	s.generated.Add(1)
+}
+
+func (s *LatencyStats) AddMailboxBackpressure(duration time.Duration) {
+	s.mailboxBackpressureCount.Add(1)
+	s.mailboxBackpressure.Add(duration.Nanoseconds())
+}
+
+func (s *LatencyStats) AddReadyBackpressure(duration time.Duration) {
+	s.readyBackpressureCount.Add(1)
+	s.readyBackpressure.Add(duration.Nanoseconds())
 }
 
 // Add registra una latencia.
@@ -166,6 +181,11 @@ func (s *LatencyStats) PrintResults(m runtime.MemStats) {
 		"generated_sec", g/30,
 		"processed_sec", p/30,
 		"backlog", backlog,
+
+		"mailbox_backpressure_count", s.mailboxBackpressureCount.Swap(0),
+		"mailbox_backpressure_duration", time.Duration(s.mailboxBackpressure.Swap(0)),
+		"ready_backpressure_count", s.readyBackpressureCount.Swap(0),
+		"ready_backpressure_duration", time.Duration(s.readyBackpressure.Swap(0)),
 
 		"gc", m.NumGC,
 		"gc_cpu", m.GCCPUFraction,
