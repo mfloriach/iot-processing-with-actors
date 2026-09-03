@@ -28,7 +28,7 @@ type Actor struct {
 func NewActor(id string) *Actor {
 	actor := &Actor{
 		id:      id,
-		mailbox: make(chan Telemetry, 100000),
+		mailbox: make(chan Telemetry, 1_000_000),
 		queued:  false,
 	}
 	actor.snapshot.Store(&DeviceState{})
@@ -36,23 +36,25 @@ func NewActor(id string) *Actor {
 	return actor
 }
 
-func (a *Actor) Update() bool {
-	select {
-	case msg := <-a.mailbox:
-		state := statePool.Get().(*DeviceState)
+func (a *Actor) Update(quantum int) bool {
+	for i := 0; i < quantum; i++ {
+		select {
+		case msg := <-a.mailbox:
+			state := statePool.Get().(*DeviceState)
 
-		state.Data = msg
-		state.Online = true
+			state.Data = msg
+			state.Online = true
 
-		// Publish a consistent snapshot for lock-free readers.
-		oldState := a.snapshot.Swap(state)
-		statePool.Put(oldState)
+			// Publish a consistent snapshot for lock-free readers.
+			oldState := a.snapshot.Swap(state)
+			statePool.Put(oldState)
 
-		elapsed := time.Since(msg.TTL)
-		mesures.Stats.Add(elapsed)
-	default:
-		a.queued = false
-		return false
+			elapsed := time.Since(msg.TTL)
+			mesures.Stats.Add(elapsed)
+		default:
+			a.queued = false
+			return false
+		}
 	}
 
 	return true
@@ -63,7 +65,7 @@ func (a *Actor) Send(msg Telemetry) bool {
 	case a.mailbox <- msg:
 		// Sent immediately.
 	default:
-		// // Mailbox is full.
+		// Mailbox is full.
 		// slog.Debug("backpressure",
 		// 	"queue", "mailbox",
 		// 	"device", a.id,

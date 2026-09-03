@@ -60,7 +60,7 @@ func (m DeviceManager) Next() iter.Seq[*Actor] {
 func (m DeviceManager) ProcessOne(t *Actor) (hasMore bool) {
 	// Requeue the actor while it still has work so one busy mailbox does not
 	// monopolize the shard and starve other devices.
-	if t.Update() {
+	if t.Update(50) {
 		select {
 		case m.ready <- t:
 		default:
@@ -70,7 +70,7 @@ func (m DeviceManager) ProcessOne(t *Actor) (hasMore bool) {
 				"len", len(m.ready),
 				"cap", cap(m.ready),
 			)
-
+			m.ready <- t
 		}
 		return true
 	}
