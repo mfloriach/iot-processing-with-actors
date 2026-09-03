@@ -2,6 +2,7 @@ package device
 
 import (
 	"iter"
+	"log/slog"
 )
 
 type DeviceManager struct {
@@ -11,8 +12,8 @@ type DeviceManager struct {
 
 func NewDeviceManager() DeviceManager {
 	return DeviceManager{
-		devices: make(map[string]*Actor, 50),
-		ready:   make(chan *Actor, 10),
+		devices: make(map[string]*Actor, 30),
+		ready:   make(chan *Actor, 30),
 	}
 }
 
@@ -31,7 +32,18 @@ func (m DeviceManager) Send(task Telemetry) {
 
 	device := m.devices[id]
 	if device.Send(task) {
-		m.ready <- device
+		select {
+		case m.ready <- device:
+		default:
+			// Mailbox is full.
+			slog.Debug("backpressure",
+				"queue", "ready",
+				"len", len(m.ready),
+				"cap", cap(m.ready),
+			)
+
+			m.ready <- device
+		}
 	}
 }
 
@@ -49,7 +61,17 @@ func (m DeviceManager) ProcessOne(t *Actor) (hasMore bool) {
 	// Requeue the actor while it still has work so one busy mailbox does not
 	// monopolize the shard and starve other devices.
 	if t.Update() {
-		m.ready <- t
+		select {
+		case m.ready <- t:
+		default:
+			// Mailbox is full.
+			slog.Debug("backpressure",
+				"queue", "ready",
+				"len", len(m.ready),
+				"cap", cap(m.ready),
+			)
+
+		}
 		return true
 	}
 

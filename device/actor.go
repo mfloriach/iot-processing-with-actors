@@ -28,7 +28,7 @@ type Actor struct {
 func NewActor(id string) *Actor {
 	actor := &Actor{
 		id:      id,
-		mailbox: make(chan Telemetry, 5),
+		mailbox: make(chan Telemetry, 100000),
 		queued:  false,
 	}
 	actor.snapshot.Store(&DeviceState{})
@@ -59,7 +59,21 @@ func (a *Actor) Update() bool {
 }
 
 func (a *Actor) Send(msg Telemetry) bool {
-	a.mailbox <- msg
+	select {
+	case a.mailbox <- msg:
+		// Sent immediately.
+	default:
+		// // Mailbox is full.
+		// slog.Debug("backpressure",
+		// 	"queue", "mailbox",
+		// 	"device", a.id,
+		// 	"len", len(a.mailbox),
+		// 	"cap", cap(a.mailbox),
+		// )
+
+		a.mailbox <- msg
+	}
+
 	mesures.Stats.AddGenerate()
 
 	if a.queued {
