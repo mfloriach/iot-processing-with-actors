@@ -22,9 +22,7 @@ type LatencyStats struct {
 	processed   atomic.Uint64
 
 	mailboxBackpressure      atomic.Int64
-	readyBackpressure        atomic.Int64
 	mailboxBackpressureCount atomic.Uint64
-	readyBackpressureCount   atomic.Uint64
 }
 
 func NewLatencyStats() {
@@ -44,7 +42,7 @@ func NewLatencyStats() {
 func (s *LatencyStats) Run() {
 	var m runtime.MemStats
 
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(config.PRINT_TELEMETRY)
 	defer ticker.Stop()
 	timeout := time.After(5 * time.Minute)
 
@@ -58,7 +56,7 @@ func (s *LatencyStats) Run() {
 			fmt.Println("Time is up! Stopping execution.")
 			return
 		default:
-			time.Sleep(5 * time.Second) // Simulating work
+			time.Sleep(1 * time.Second) // Simulating work
 		}
 	}
 }
@@ -70,11 +68,6 @@ func (s *LatencyStats) AddGenerate() {
 func (s *LatencyStats) AddMailboxBackpressure(duration time.Duration) {
 	s.mailboxBackpressureCount.Add(1)
 	s.mailboxBackpressure.Add(duration.Nanoseconds())
-}
-
-func (s *LatencyStats) AddReadyBackpressure(duration time.Duration) {
-	s.readyBackpressureCount.Add(1)
-	s.readyBackpressure.Add(duration.Nanoseconds())
 }
 
 // Add registra una latencia.
@@ -178,14 +171,12 @@ func (s *LatencyStats) PrintResults(m runtime.MemStats) {
 		"p90", p90,
 		"p99", p99,
 
-		"generated_sec", g/30,
-		"processed_sec", p/30,
+		"generated_rps", g/uint64(config.PRINT_TELEMETRY.Seconds()),
+		"processed_rps", p/uint64(config.PRINT_TELEMETRY.Seconds()),
 		"backlog", backlog,
 
 		"mailbox_backpressure_count", s.mailboxBackpressureCount.Swap(0),
 		"mailbox_backpressure_duration", time.Duration(s.mailboxBackpressure.Swap(0)),
-		"ready_backpressure_count", s.readyBackpressureCount.Swap(0),
-		"ready_backpressure_duration", time.Duration(s.readyBackpressure.Swap(0)),
 
 		"gc", m.NumGC,
 		"gc_cpu", m.GCCPUFraction,
@@ -194,8 +185,8 @@ func (s *LatencyStats) PrintResults(m runtime.MemStats) {
 		"heap_objects", m.HeapObjects,
 
 		"num_cpus", config.NUM_CPUS,
-		"num_of_workers", config.NUM_OF_WORKERS_GENERETIC_NOISE,
-		"num_of_workers_updating", config.NUM_OF_WORKERS_UPDATING,
+		"num_of_workers", config.NUM_OF_WORKERS,
+		// "num_of_workers_updating", config.NUM_OF_WORKERS_UPDATING,
 
 		"total_alloc_mb", m.TotalAlloc/1024/1024,
 		"mallocs", m.Mallocs,

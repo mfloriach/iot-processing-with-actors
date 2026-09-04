@@ -3,9 +3,7 @@ package main
 import (
 	"log/slog"
 	"os"
-	"strconv"
 
-	"datacollector/config"
 	"datacollector/device"
 	"datacollector/injestor"
 	"datacollector/mesures"
@@ -25,12 +23,9 @@ func main() {
 	})))
 
 	manager := device.NewDeviceManager()
-	for i := range config.NUM_OF_SENSORS {
-		manager.AddDevice(device.NewActor("sensor-" + strconv.Itoa(i)))
-	}
 
 	injestor := injestor.NewInjestorRandom()
-	sched := scheduler.NewScheduler(manager, injestor)
+	sched := scheduler.NewScheduler(&manager, injestor)
 	go sched.Run()
 
 	go StartServer(manager)

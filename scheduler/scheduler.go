@@ -4,87 +4,23 @@ import (
 	"datacollector/config"
 	"datacollector/device"
 	"datacollector/injestor"
-	"fmt"
-	"math/rand"
-	"time"
 )
 
 type Scheduler struct {
-	manager  device.DeviceManager
 	injestor injestor.Injestor
+	manager  *device.DeviceManager
 }
 
-func NewScheduler(manager device.DeviceManager, injestor injestor.Injestor) Scheduler {
+func NewScheduler(manager *device.DeviceManager, injestor injestor.Injestor) Scheduler {
 	return Scheduler{
-		manager:  manager,
 		injestor: injestor,
+		manager:  manager,
 	}
 }
 
 func (s Scheduler) Run() {
-	s.receiveAnalysis(config.SENSOR_OF_ANALYSIS_ID)
-	s.receiveNoise()
-	s.updateStatus()
-}
-
-func (s Scheduler) updateStatus() {
-	for range config.NUM_OF_WORKERS_UPDATING {
-		go func() {
-			for {
-				for d := range s.manager.Next() {
-					if hasNext := s.manager.ProcessOne(d); !hasNext {
-						break
-					}
-				}
-				time.Sleep(time.Millisecond * 10)
-			}
-		}()
+	for i := 0; i < config.NUM_OF_WORKERS; i++ {
+		w := NewWorker(i, s.manager, s.injestor)
+		go w.Run(i*config.SENSOR_PER_WORKER, ((i+1)*config.SENSOR_PER_WORKER)-1)
 	}
-}
-
-func (s Scheduler) receiveNoise() {
-	workers := config.NUM_OF_WORKERS_GENERETIC_NOISE
-	sensors := config.NUM_OF_SENSORS
-
-	for i := 0; i < workers; i++ {
-		go func() {
-			start := i * sensors / workers
-			end := (i + 1) * sensors / workers
-
-			r := rand.New(rand.NewSource(time.Now().UnixNano()))
-
-			for deviceID := start; deviceID < end; deviceID++ {
-				id := fmt.Sprintf("sensor-%d", deviceID+1)
-
-				for d := range s.injestor.Run(id, r) {
-					s.manager.Send(d)
-				}
-			}
-		}()
-	}
-}
-
-func (s Scheduler) receiveAnalysis(sensorID string) {
-	go func() {
-		ticker := time.NewTicker(time.Second)
-		defer ticker.Stop()
-		count := 0
-
-		for range ticker.C {
-			d := device.Telemetry{
-				Sample: device.Sample{
-					DeviceID: sensorID,
-					TTL:      time.Now(),
-				},
-
-				Temperature: float64(count),
-				Humidity:    float64(count),
-				Battery:     float64(count),
-				Noise:       float64(count),
-			}
-
-			s.manager.Send(d)
-			count++
-		}
-	}()
 }

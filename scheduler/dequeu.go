@@ -7,23 +7,23 @@ import (
 
 type Deque struct {
 	mu    sync.Mutex
-	items []device.Telemetry
+	items []*device.Actor
 }
 
-func (d *Deque) Push(t device.Telemetry) {
+func (d *Deque) Push(t *device.Actor) {
 	d.mu.Lock()
+	defer d.mu.Unlock()
 	d.items = append(d.items, t)
-	d.mu.Unlock()
 }
 
 // Pop from the owner's side.
-func (d *Deque) Pop() (device.Telemetry, bool) {
+func (d *Deque) Pop() (*device.Actor, bool) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
 	n := len(d.items)
 	if n == 0 {
-		return device.Telemetry{}, false
+		return nil, false
 	}
 
 	t := d.items[n-1]
@@ -33,12 +33,12 @@ func (d *Deque) Pop() (device.Telemetry, bool) {
 }
 
 // Steal from the opposite side.
-func (d *Deque) Steal() (device.Telemetry, bool) {
+func (d *Deque) Steal() (*device.Actor, bool) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
 	if len(d.items) == 0 {
-		return device.Telemetry{}, false
+		return nil, false
 	}
 
 	t := d.items[0]

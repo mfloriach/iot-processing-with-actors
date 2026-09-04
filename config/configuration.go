@@ -1,12 +1,15 @@
 package config
 
-const (
-	NUM_CPUS                       = 3
-	NUM_OF_WORKERS_UPDATING        = 10
-	NUM_OF_WORKERS_GENERETIC_NOISE = 25
+import "time"
 
-	SENSOR_OF_ANALYSIS_ID = "sensor-0"
-	NUM_OF_SENSORS        = 100_000
-	MAILBOX_SIZE          = 4_000
-	QUANTUM               = 400
+const (
+	NUM_CPUS       = 1
+	NUM_OF_WORKERS = 2
+
+	SENSOR_OF_ANALYSIS_ID = "0"
+	MAILBOX_SIZE          = 10
+	// QUANTUM               = 400
+
+	PRINT_TELEMETRY   = 10 * time.Second
+	SENSOR_PER_WORKER = 1_500_000
 )

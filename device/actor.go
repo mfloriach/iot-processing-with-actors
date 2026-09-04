@@ -72,8 +72,6 @@ func (a *Actor) Send(msg Telemetry) bool {
 		mesures.Stats.AddMailboxBackpressure(time.Since(start))
 	}
 
-	mesures.Stats.AddGenerate()
-
 	if a.queued {
 		return false
 	}
