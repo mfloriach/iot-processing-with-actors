@@ -9,41 +9,44 @@ type ActorHooks struct {
 	OnBackpressure func(time.Duration)
 }
 
-type Actor[S any, T any] struct {
-	ID          int
-	mailbox     chan T
-	pool        *Pool[S]
-	snapshot    atomic.Pointer[S]
-	updateState func(*S, T)
-	queued      bool
-	hooks       ActorHooks
+type Message[S any] interface {
+	Apply(*S)
+	GetDeviceID() int
 }
 
-func NewActor[S any, T any](id int, mailbox_size int, pool *Pool[S], hooks ActorHooks, updateState func(*S, T)) *Actor[S, T] {
-	actor := &Actor[S, T]{
-		ID:          id,
-		mailbox:     make(chan T, mailbox_size),
-		pool:        pool,
-		queued:      false,
-		hooks:       hooks,
-		updateState: updateState,
+type Actor[S any, M Message[S]] struct {
+	ID       int
+	mailbox  chan M
+	pool     *Pool[S]
+	snapshot atomic.Pointer[S]
+	queued   bool
+	hooks    ActorHooks
+}
+
+func NewActor[S any, M Message[S]](id int, mailbox_size int, pool *Pool[S], hooks ActorHooks) *Actor[S, M] {
+	actor := &Actor[S, M]{
+		ID:      id,
+		mailbox: make(chan M, mailbox_size),
+		pool:    pool,
+		queued:  false,
+		hooks:   hooks,
 	}
-	actor.snapshot.Store(new(S))
+	actor.snapshot.Store(pool.Get())
 
 	return actor
 }
 
-func (a *Actor[S, T]) GetID() int {
+func (a *Actor[S, M]) GetID() int {
 	return a.ID
 }
 
-func (a *Actor[S, T]) Update(quantum int) (hasNext bool) {
+func (a *Actor[S, M]) Update(quantum int) (hasNext bool) {
 	for i := 0; i < quantum; i++ {
 		select {
 		case msg := <-a.mailbox:
 			state := a.pool.Get()
 
-			a.updateState(state, msg)
+			msg.Apply(state)
 
 			// Publish a consistent snapshot for lock-free readers.
 			oldState := a.snapshot.Swap(state)
@@ -58,7 +61,7 @@ func (a *Actor[S, T]) Update(quantum int) (hasNext bool) {
 	return true
 }
 
-func (a *Actor[S, T]) Send(msg T) bool {
+func (a *Actor[S, M]) Send(msg M) bool {
 	select {
 	case a.mailbox <- msg:
 		// Sent immediately.
@@ -79,7 +82,7 @@ func (a *Actor[S, T]) Send(msg T) bool {
 	return true
 }
 
-func (a *Actor[S, T]) State() *S {
+func (a *Actor[S, M]) State() *S {
 	snapshot := a.snapshot.Load()
 	if snapshot == nil {
 		return new(S)

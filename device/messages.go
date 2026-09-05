@@ -5,18 +5,6 @@ import (
 	"time"
 )
 
-type Message interface {
-	IsMessage()
-}
-
-func UpdateDeviceState(state *DeviceState, msg Telemetry) {
-	state.Data = msg
-	state.Online = true
-
-	elapsed := time.Since(msg.TTL)
-	mesures.Stats.Add(elapsed)
-}
-
 type DeviceState struct {
 	Data   Telemetry
 	Online bool
@@ -36,10 +24,14 @@ type Telemetry struct {
 	Noise       float64
 }
 
-func (t Telemetry) IsMessage(state *DeviceState) {
+func (t Telemetry) Apply(state *DeviceState) {
 	state.Data = t
 	state.Online = true
 
 	elapsed := time.Since(t.TTL)
 	mesures.Stats.Add(elapsed)
+}
+
+func (t Telemetry) GetDeviceID() int {
+	return t.Sample.DeviceID
 }

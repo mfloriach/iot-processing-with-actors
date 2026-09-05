@@ -16,8 +16,6 @@ import (
 )
 
 func main() {
-	mesures.NewLatencyStats()
-
 	slog.SetDefault(slog.New(spretty.NewHandler(os.Stdout, &spretty.HandlerOptions{
 		Level:     slog.LevelDebug,
 		AddSource: true,
@@ -33,8 +31,10 @@ func main() {
 
 	manager := device.NewDeviceManager(config.SENSOR_PER_WORKER * config.NUM_CPUS)
 	for i := 0; i < config.NUM_CPUS*config.SENSOR_PER_WORKER; i++ {
-		manager.AddDevice(libs.NewActor(i, config.MAILBOX_SIZE, deviceStatePool, hooks, device.UpdateDeviceState))
+		manager.AddDevice(libs.NewActor[device.DeviceState, libs.Message[device.DeviceState]](i, config.MAILBOX_SIZE, deviceStatePool, hooks))
 	}
+
+	mesures.NewLatencyStats()
 
 	sched := scheduler.NewScheduler(manager)
 	go sched.Run()

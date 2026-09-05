@@ -4,7 +4,7 @@ import (
 	"datacollector/libs"
 )
 
-type Device = libs.Actor[DeviceState, Telemetry]
+type Device = libs.Actor[DeviceState, libs.Message[DeviceState]]
 
 type DeviceManager struct {
 	devices map[int]*Device

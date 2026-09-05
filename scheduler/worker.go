@@ -9,14 +9,14 @@ import (
 
 type Worker struct {
 	ID      int
-	deque   libs.Deque[*libs.Actor[device.DeviceState, device.Telemetry]]
+	deque   libs.Deque[*libs.Actor[device.DeviceState, libs.Message[device.DeviceState]]]
 	manager *device.DeviceManager
 }
 
 func NewWorker(id int, manager *device.DeviceManager) *Worker {
 	return &Worker{
 		ID:      id,
-		deque:   libs.Deque[*libs.Actor[device.DeviceState, device.Telemetry]]{},
+		deque:   libs.Deque[*libs.Actor[device.DeviceState, libs.Message[device.DeviceState]]]{},
 		manager: manager,
 	}
 }
@@ -26,8 +26,8 @@ func (w *Worker) Run(start, end int) {
 	go w.update()
 }
 
-func (w *Worker) submit(t device.Telemetry) {
-	d := w.manager.GetDevice(t.DeviceID)
+func (w *Worker) submit(t libs.Message[device.DeviceState]) {
+	d := w.manager.GetDevice(t.GetDeviceID())
 
 	d.Send(t)
 	w.deque.Push(d)
