@@ -1,10 +1,11 @@
 package device
 
 import (
+	"datacollector/device/messages"
 	"datacollector/libs"
 )
 
-type Device = libs.Actor[DeviceState, libs.Message[DeviceState]]
+type Device = libs.Actor[DeviceState, messages.Message]
 
 type DeviceManager struct {
 	devices map[int]*Device

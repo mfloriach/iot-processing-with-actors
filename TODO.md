@@ -13,8 +13,7 @@ Deadlines — tareas con deadline tienen prioridad.
 # Implemented
 * Actor mailbox → autoridad para modificar el estado.
 * Snapshot/atomic → lectura rápida del último estado.
-* Group devices in shards
-* Worker per shard, no per actor
+* No go routine for actor
 * SSE for event publish
 * Check the context deadlines
 * Fairness — un device con 10.000 tareas no monopoliza el worker.

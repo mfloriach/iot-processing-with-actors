@@ -5,31 +5,29 @@ import (
 	"time"
 )
 
-type ActorHooks struct {
+type ActorHooks[M any] struct {
+	OnApply        func(M)
 	OnBackpressure func(time.Duration)
 }
 
-type Message[S any] interface {
-	Apply(*S)
-	GetDeviceID() int
-}
-
-type Actor[S any, M Message[S]] struct {
+type Actor[S any, M any] struct {
 	ID       int
 	mailbox  chan M
 	pool     *Pool[S]
 	snapshot atomic.Pointer[S]
 	queued   bool
-	hooks    ActorHooks
+	hooks    ActorHooks[M]
+	update   func(*S, M)
 }
 
-func NewActor[S any, M Message[S]](id int, mailbox_size int, pool *Pool[S], hooks ActorHooks) *Actor[S, M] {
+func NewActor[S any, M any](id int, mailbox_size int, pool *Pool[S], hooks ActorHooks[M], update func(*S, M)) *Actor[S, M] {
 	actor := &Actor[S, M]{
 		ID:      id,
 		mailbox: make(chan M, mailbox_size),
 		pool:    pool,
 		queued:  false,
 		hooks:   hooks,
+		update:  update,
 	}
 	actor.snapshot.Store(pool.Get())
 
@@ -45,12 +43,15 @@ func (a *Actor[S, M]) Update(quantum int) (hasNext bool) {
 		select {
 		case msg := <-a.mailbox:
 			state := a.pool.Get()
-
-			msg.Apply(state)
+			a.update(state, msg)
 
 			// Publish a consistent snapshot for lock-free readers.
 			oldState := a.snapshot.Swap(state)
 			a.pool.Put(oldState)
+
+			if a.hooks.OnApply != nil {
+				a.hooks.OnApply(msg)
+			}
 
 		default:
 			a.queued = false
@@ -61,7 +62,7 @@ func (a *Actor[S, M]) Update(quantum int) (hasNext bool) {
 	return true
 }
 
-func (a *Actor[S, M]) Send(msg M) bool {
+func (a *Actor[S, M]) Send(msg M) (hasToEnqueu bool) {
 	select {
 	case a.mailbox <- msg:
 		// Sent immediately.

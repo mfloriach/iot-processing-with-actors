@@ -3,9 +3,11 @@ package main
 import (
 	"log/slog"
 	"os"
+	"time"
 
 	"datacollector/config"
 	"datacollector/device"
+	"datacollector/device/messages"
 	"datacollector/libs"
 	"datacollector/mesures"
 	"datacollector/scheduler"
@@ -25,13 +27,17 @@ func main() {
 		return new(device.DeviceState)
 	})
 
-	hooks := libs.ActorHooks{
+	hooks := libs.ActorHooks[messages.Message]{
+		OnApply: func(msg messages.Message) {
+			elapsed := time.Since(msg.TTL)
+			mesures.Stats.Add(elapsed)
+		},
 		OnBackpressure: mesures.Stats.AddMailboxBackpressure,
 	}
 
 	manager := device.NewDeviceManager(config.SENSOR_PER_WORKER * config.NUM_CPUS)
 	for i := 0; i < config.NUM_CPUS*config.SENSOR_PER_WORKER; i++ {
-		manager.AddDevice(libs.NewActor[device.DeviceState, libs.Message[device.DeviceState]](i, config.MAILBOX_SIZE, deviceStatePool, hooks))
+		manager.AddDevice(libs.NewActor(i, config.MAILBOX_SIZE, deviceStatePool, hooks, device.Apply))
 	}
 
 	mesures.NewLatencyStats()
