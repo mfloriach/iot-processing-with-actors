@@ -5,6 +5,10 @@ import (
 	"time"
 )
 
+type Message interface {
+	IsMessage()
+}
+
 func UpdateDeviceState(state *DeviceState, msg Telemetry) {
 	state.Data = msg
 	state.Online = true
@@ -30,4 +34,12 @@ type Telemetry struct {
 	Humidity    float64
 	Battery     float64
 	Noise       float64
+}
+
+func (t Telemetry) IsMessage(state *DeviceState) {
+	state.Data = t
+	state.Online = true
+
+	elapsed := time.Since(t.TTL)
+	mesures.Stats.Add(elapsed)
 }

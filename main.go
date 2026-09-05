@@ -27,14 +27,13 @@ func main() {
 		return new(device.DeviceState)
 	})
 
-	hooks := libs.ActorHooks[device.DeviceState, device.Telemetry]{
-		UpdateState:    device.UpdateDeviceState,
+	hooks := libs.ActorHooks{
 		OnBackpressure: mesures.Stats.AddMailboxBackpressure,
 	}
 
 	manager := device.NewDeviceManager(config.SENSOR_PER_WORKER * config.NUM_CPUS)
 	for i := 0; i < config.NUM_CPUS*config.SENSOR_PER_WORKER; i++ {
-		manager.AddDevice(libs.NewActor(i, config.MAILBOX_SIZE, deviceStatePool, hooks))
+		manager.AddDevice(libs.NewActor(i, config.MAILBOX_SIZE, deviceStatePool, hooks, device.UpdateDeviceState))
 	}
 
 	sched := scheduler.NewScheduler(manager)

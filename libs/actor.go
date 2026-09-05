@@ -5,8 +5,7 @@ import (
 	"time"
 )
 
-type ActorHooks[S any, T any] struct {
-	UpdateState    func(*S, T)
+type ActorHooks struct {
 	OnBackpressure func(time.Duration)
 }
 
@@ -17,16 +16,17 @@ type Actor[S any, T any] struct {
 	snapshot    atomic.Pointer[S]
 	updateState func(*S, T)
 	queued      bool
-	hooks       ActorHooks[S, T]
+	hooks       ActorHooks
 }
 
-func NewActor[S any, T any](id int, mailbox_size int, pool *Pool[S], hooks ActorHooks[S, T]) *Actor[S, T] {
+func NewActor[S any, T any](id int, mailbox_size int, pool *Pool[S], hooks ActorHooks, updateState func(*S, T)) *Actor[S, T] {
 	actor := &Actor[S, T]{
-		ID:      id,
-		mailbox: make(chan T, mailbox_size),
-		pool:    pool,
-		queued:  false,
-		hooks:   hooks,
+		ID:          id,
+		mailbox:     make(chan T, mailbox_size),
+		pool:        pool,
+		queued:      false,
+		hooks:       hooks,
+		updateState: updateState,
 	}
 	actor.snapshot.Store(new(S))
 
@@ -43,7 +43,7 @@ func (a *Actor[S, T]) Update(quantum int) (hasNext bool) {
 		case msg := <-a.mailbox:
 			state := a.pool.Get()
 
-			a.hooks.UpdateState(state, msg)
+			a.updateState(state, msg)
 
 			// Publish a consistent snapshot for lock-free readers.
 			oldState := a.snapshot.Swap(state)
