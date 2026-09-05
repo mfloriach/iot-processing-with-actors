@@ -4,6 +4,11 @@ import (
 	"time"
 )
 
+type DeviceState struct {
+	Data   Telemetry
+	Online bool
+}
+
 type Sample struct {
 	DeviceID int
 	TTL      time.Time `json:"-"`

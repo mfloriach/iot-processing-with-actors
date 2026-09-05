@@ -6,6 +6,7 @@ import (
 
 	"datacollector/config"
 	"datacollector/device"
+	"datacollector/libs"
 	"datacollector/mesures"
 	"datacollector/scheduler"
 
@@ -13,6 +14,11 @@ import (
 
 	spretty "github.com/mickamy/slog-pretty"
 )
+
+func updateDeviceState(state *device.DeviceState, msg device.Telemetry) {
+	state.Data = msg
+	state.Online = true
+}
 
 func main() {
 	mesures.NewLatencyStats()
@@ -22,9 +28,13 @@ func main() {
 		AddSource: true,
 	})))
 
+	deviceStatePool := libs.NewPool(func() *device.DeviceState {
+		return new(device.DeviceState)
+	})
+
 	manager := device.NewDeviceManager()
 	for i := 0; i < config.NUM_CPUS*config.SENSOR_PER_WORKER; i++ {
-		manager.AddDevice(device.NewActor(i))
+		manager.AddDevice(device.NewActor(i, deviceStatePool, updateDeviceState))
 	}
 
 	sched := scheduler.NewScheduler(manager)

@@ -9,14 +9,14 @@ import (
 
 type Worker struct {
 	ID      int
-	deque   libs.Deque[*device.Actor]
+	deque   libs.Deque[*device.Actor[device.DeviceState]]
 	manager *device.DeviceManager
 }
 
 func NewWorker(id int, manager *device.DeviceManager) *Worker {
 	return &Worker{
 		ID:      id,
-		deque:   libs.Deque[*device.Actor]{},
+		deque:   libs.Deque[*device.Actor[device.DeviceState]]{},
 		manager: manager,
 	}
 }

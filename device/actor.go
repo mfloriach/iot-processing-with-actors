@@ -8,45 +8,39 @@ import (
 	"time"
 )
 
-var statePool = libs.NewPool(func() *DeviceState {
-	return new(DeviceState)
-})
-
-type DeviceState struct {
-	Data   Telemetry
-	Online bool
+type Actor[S any] struct {
+	id          int
+	mailbox     chan Telemetry
+	pool        *libs.Pool[S]
+	snapshot    atomic.Pointer[S]
+	updateState func(*S, Telemetry)
+	queued      bool
 }
 
-type Actor struct {
-	id       int
-	mailbox  chan Telemetry
-	snapshot atomic.Pointer[DeviceState]
-	queued   bool
-}
-
-func NewActor(id int) *Actor {
-	actor := &Actor{
-		id:      id,
-		mailbox: make(chan Telemetry, config.MAILBOX_SIZE),
-		queued:  false,
+func NewActor[S any](id int, pool *libs.Pool[S], updateState func(*S, Telemetry)) *Actor[S] {
+	actor := &Actor[S]{
+		id:          id,
+		mailbox:     make(chan Telemetry, config.MAILBOX_SIZE),
+		pool:        pool,
+		queued:      false,
+		updateState: updateState,
 	}
-	actor.snapshot.Store(&DeviceState{})
+	actor.snapshot.Store(new(S))
 
 	return actor
 }
 
-func (a *Actor) Update(quantum int) bool {
+func (a *Actor[S]) Update(quantum int) bool {
 	for i := 0; i < quantum; i++ {
 		select {
 		case msg := <-a.mailbox:
-			state := statePool.Get()
+			state := a.pool.Get()
 
-			state.Data = msg
-			state.Online = true
+			a.updateState(state, msg)
 
 			// Publish a consistent snapshot for lock-free readers.
 			oldState := a.snapshot.Swap(state)
-			statePool.Put(oldState)
+			a.pool.Put(oldState)
 
 			elapsed := time.Since(msg.TTL)
 			mesures.Stats.Add(elapsed)
@@ -59,7 +53,7 @@ func (a *Actor) Update(quantum int) bool {
 	return true
 }
 
-func (a *Actor) Send(msg Telemetry) bool {
+func (a *Actor[S]) Send(msg Telemetry) bool {
 	select {
 	case a.mailbox <- msg:
 		// Sent immediately.
@@ -78,10 +72,10 @@ func (a *Actor) Send(msg Telemetry) bool {
 	return true
 }
 
-func (a *Actor) State() *DeviceState {
+func (a *Actor[S]) State() *S {
 	snapshot := a.snapshot.Load()
 	if snapshot == nil {
-		return &DeviceState{}
+		return new(S)
 	}
 
 	return snapshot
