@@ -10,6 +10,20 @@ type ActorHooks[M any] struct {
 	OnBackpressure func(time.Duration)
 }
 
+type ActorOption[M any] func(*ActorHooks[M])
+
+func ActorWithOnApply[M any](fn func(M)) ActorOption[M] {
+	return func(h *ActorHooks[M]) {
+		h.OnApply = fn
+	}
+}
+
+func ActorWithOnBackpressure[M any](fn func(time.Duration)) ActorOption[M] {
+	return func(h *ActorHooks[M]) {
+		h.OnBackpressure = fn
+	}
+}
+
 type Actor[S any, M any] struct {
 	ID       int
 	mailbox  chan M
@@ -20,10 +34,21 @@ type Actor[S any, M any] struct {
 	update   func(*S, M)
 }
 
-func NewActor[S any, M any](id int, mailbox_size int, pool *Pool[S], hooks ActorHooks[M], update func(*S, M)) *Actor[S, M] {
+func NewActor[S any, M any](id int,
+	mailboxSize int,
+	pool *Pool[S],
+	update func(*S, M),
+	options ...ActorOption[M]) *Actor[S, M] {
+
+	var hooks ActorHooks[M]
+
+	for _, option := range options {
+		option(&hooks)
+	}
+
 	actor := &Actor[S, M]{
 		ID:      id,
-		mailbox: make(chan M, mailbox_size),
+		mailbox: make(chan M, mailboxSize),
 		pool:    pool,
 		queued:  false,
 		hooks:   hooks,

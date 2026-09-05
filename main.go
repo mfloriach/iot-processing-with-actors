@@ -27,17 +27,24 @@ func main() {
 		return new(device.DeviceState)
 	})
 
-	hooks := libs.ActorHooks[messages.Message]{
-		OnApply: func(msg messages.Message) {
-			elapsed := time.Since(msg.TTL)
-			mesures.Stats.Add(elapsed)
-		},
-		OnBackpressure: mesures.Stats.AddMailboxBackpressure,
-	}
+	onApply := libs.ActorWithOnApply(func(msg messages.Message) {
+		elapsed := time.Since(msg.TTL)
+		mesures.Stats.Add(elapsed)
+	})
+	onBackpressure := libs.ActorWithOnBackpressure[messages.Message](func(d time.Duration) {
+		mesures.Stats.AddMailboxBackpressure(d)
+	})
 
 	manager := device.NewDeviceManager(config.SENSOR_PER_WORKER * config.NUM_CPUS)
 	for i := 0; i < config.NUM_CPUS*config.SENSOR_PER_WORKER; i++ {
-		manager.AddDevice(libs.NewActor(i, config.MAILBOX_SIZE, deviceStatePool, hooks, device.Apply))
+		manager.AddDevice(libs.NewActor(
+			i,
+			config.MAILBOX_SIZE,
+			deviceStatePool,
+			device.Apply,
+			onApply,
+			onBackpressure,
+		))
 	}
 
 	mesures.NewLatencyStats()

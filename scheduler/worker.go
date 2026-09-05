@@ -3,32 +3,38 @@ package scheduler
 import (
 	"datacollector/device"
 	"datacollector/device/messages"
+	"datacollector/injestors"
 	"datacollector/libs"
-	"datacollector/mesures"
-	"time"
+	"runtime"
 )
 
 type Worker struct {
-	ID      int
-	deque   libs.Deque[*libs.Actor[device.DeviceState, messages.Message]]
-	manager *device.DeviceManager
+	ID           int
+	deque        *libs.Deque[*libs.Actor[device.DeviceState, messages.Message]]
+	manager      *device.DeviceManager
+	in           injestors.InjestorCount
+	onStealActor func(int) (*libs.Actor[device.DeviceState, messages.Message], bool)
 }
 
-func NewWorker(id int, manager *device.DeviceManager) *Worker {
+func NewWorker(
+	id int,
+	manager *device.DeviceManager,
+	deque *libs.Deque[*libs.Actor[device.DeviceState, messages.Message]],
+	injestor injestors.InjestorCount,
+	onStealActor func(int) (*libs.Actor[device.DeviceState, messages.Message], bool),
+) *Worker {
 	return &Worker{
-		ID: id,
-		deque: *libs.NewDeque[*libs.Actor[device.DeviceState, messages.Message]](
-			100,
-			libs.DequeHooks{},
-		),
-		manager: manager,
+		ID:           id,
+		deque:        deque,
+		manager:      manager,
+		in:           injestor,
+		onStealActor: onStealActor,
 	}
 }
 
-func (w *Worker) Run(start, end int) {
-	go w.injestorTelemetry(start, end)
-	go w.injestorAlarm(12)
-	go w.injestorCommand(12)
+func (w *Worker) Run() {
+	w.in.Run(w.submit)
+
 	go w.update()
 }
 
@@ -40,73 +46,15 @@ func (w *Worker) submit(t messages.Message) {
 	}
 }
 
-func (w *Worker) injestorTelemetry(start, end int) {
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-	count := 0
-
-	for range ticker.C {
-		for i := start; i < end; i++ {
-			w.submit(messages.Message{
-				Kind:     messages.MessageTelemetry,
-				DeviceID: i,
-				TTL:      time.Now(),
-				Telemetry: messages.Telemetry{
-					Temperature: float64(count),
-					Humidity:    float64(count),
-					Battery:     float64(count),
-					Noise:       float64(count),
-				}})
-
-			mesures.Stats.AddGenerate()
-		}
-		count++
-	}
-}
-
-func (w *Worker) injestorCommand(deviceID int) {
-	ticker := time.NewTicker(2 * time.Second)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		w.submit(messages.Message{
-			Kind:     messages.MessageCommand,
-			DeviceID: deviceID,
-			TTL:      time.Now(),
-			Command: messages.Command{
-				Type:  messages.CommandEnable,
-				Value: 3.12,
-			}})
-
-		mesures.Stats.AddGenerate()
-	}
-}
-
-func (w *Worker) injestorAlarm(deviceID int) {
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		w.submit(messages.Message{
-			Kind:     messages.MessageAlarm,
-			DeviceID: deviceID,
-			TTL:      time.Now(),
-			Alarm: messages.Alarm{
-				Type:      messages.AlarmBatteryLow,
-				Severity:  messages.SeverityWarning,
-				Message:   "sdfdsfdfdsfs",
-				Timestamp: time.Now(),
-			}})
-
-		mesures.Stats.AddGenerate()
-	}
-}
-
 func (w *Worker) update() {
 	for {
 		a, ok := w.deque.Pop()
 		if !ok {
-			continue
+			a, ok = w.onStealActor(w.ID)
+			if !ok {
+				runtime.Gosched()
+				continue
+			}
 		}
 
 		if hasToEnque := a.Update(1); hasToEnque {
