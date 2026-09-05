@@ -1,8 +1,17 @@
 package device
 
 import (
+	"datacollector/mesures"
 	"time"
 )
+
+func UpdateDeviceState(state *DeviceState, msg Telemetry) {
+	state.Data = msg
+	state.Online = true
+
+	elapsed := time.Since(msg.TTL)
+	mesures.Stats.Add(elapsed)
+}
 
 type DeviceState struct {
 	Data   Telemetry

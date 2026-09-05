@@ -4,20 +4,26 @@ import (
 	"datacollector/libs"
 )
 
+type Device = libs.Actor[DeviceState, Telemetry]
+
 type DeviceManager struct {
-	devices map[int]*libs.Actor[DeviceState, Telemetry]
+	devices map[int]*Device
 }
 
 func NewDeviceManager(max_sensor_num int) *DeviceManager {
 	return &DeviceManager{
-		devices: make(map[int]*libs.Actor[DeviceState, Telemetry], max_sensor_num),
+		devices: make(map[int]*Device, max_sensor_num),
 	}
 }
 
-func (m *DeviceManager) AddDevice(device *libs.Actor[DeviceState, Telemetry]) {
+func (m *DeviceManager) AddDevice(device *Device) {
 	m.devices[device.GetID()] = device
 }
 
-func (m *DeviceManager) GetDevice(id int) *libs.Actor[DeviceState, Telemetry] {
+func (m *DeviceManager) GetDevice(id int) *Device {
 	return m.devices[id]
+}
+
+func (m *DeviceManager) DeleteDevice(id int) {
+	delete(m.devices, id)
 }

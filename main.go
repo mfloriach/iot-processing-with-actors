@@ -3,7 +3,6 @@ package main
 import (
 	"log/slog"
 	"os"
-	"time"
 
 	"datacollector/config"
 	"datacollector/device"
@@ -15,14 +14,6 @@ import (
 
 	spretty "github.com/mickamy/slog-pretty"
 )
-
-func updateDeviceState(state *device.DeviceState, msg device.Telemetry) {
-	state.Data = msg
-	state.Online = true
-
-	elapsed := time.Since(msg.TTL)
-	mesures.Stats.Add(elapsed)
-}
 
 func main() {
 	mesures.NewLatencyStats()
@@ -36,9 +27,14 @@ func main() {
 		return new(device.DeviceState)
 	})
 
+	hooks := libs.ActorHooks[device.DeviceState, device.Telemetry]{
+		UpdateState:    device.UpdateDeviceState,
+		OnBackpressure: mesures.Stats.AddMailboxBackpressure,
+	}
+
 	manager := device.NewDeviceManager(config.SENSOR_PER_WORKER * config.NUM_CPUS)
 	for i := 0; i < config.NUM_CPUS*config.SENSOR_PER_WORKER; i++ {
-		manager.AddDevice(libs.NewActor(i, config.MAILBOX_SIZE, deviceStatePool, updateDeviceState))
+		manager.AddDevice(libs.NewActor(i, config.MAILBOX_SIZE, deviceStatePool, hooks))
 	}
 
 	sched := scheduler.NewScheduler(manager)
