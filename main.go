@@ -4,8 +4,8 @@ import (
 	"log/slog"
 	"os"
 
+	"datacollector/config"
 	"datacollector/device"
-	"datacollector/injestor"
 	"datacollector/mesures"
 	"datacollector/scheduler"
 
@@ -23,9 +23,11 @@ func main() {
 	})))
 
 	manager := device.NewDeviceManager()
+	for i := 0; i < config.NUM_CPUS*config.SENSOR_PER_WORKER; i++ {
+		manager.AddDevice(device.NewActor(i))
+	}
 
-	injestor := injestor.NewInjestorRandom()
-	sched := scheduler.NewScheduler(&manager, injestor)
+	sched := scheduler.NewScheduler(manager)
 	go sched.Run()
 
 	go StartServer(manager)

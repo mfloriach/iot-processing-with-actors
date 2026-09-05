@@ -2,24 +2,21 @@ package scheduler
 
 import (
 	"datacollector/device"
-	"datacollector/injestor"
+	"datacollector/libs"
 	"datacollector/mesures"
-	"strconv"
 	"time"
 )
 
 type Worker struct {
 	ID      int
-	deque   Deque
-	in      injestor.Injestor
+	deque   libs.Deque[*device.Actor]
 	manager *device.DeviceManager
 }
 
-func NewWorker(id int, manager *device.DeviceManager, injestor injestor.Injestor) *Worker {
+func NewWorker(id int, manager *device.DeviceManager) *Worker {
 	return &Worker{
 		ID:      id,
-		deque:   Deque{},
-		in:      injestor,
+		deque:   libs.Deque[*device.Actor]{},
 		manager: manager,
 	}
 }
@@ -45,7 +42,7 @@ func (w *Worker) injestor(start, end int) {
 		for i := start; i < end; i++ {
 			d := device.Telemetry{
 				Sample: device.Sample{
-					DeviceID: strconv.Itoa(i),
+					DeviceID: i,
 					TTL:      time.Now(),
 				},
 
@@ -57,8 +54,8 @@ func (w *Worker) injestor(start, end int) {
 
 			w.submit(d)
 			mesures.Stats.AddGenerate()
-			count++
 		}
+		count++
 	}
 }
 

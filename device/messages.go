@@ -5,7 +5,7 @@ import (
 )
 
 type Sample struct {
-	DeviceID string
+	DeviceID int
 	TTL      time.Time `json:"-"`
 }
 

@@ -2,17 +2,15 @@ package device
 
 import (
 	"datacollector/config"
+	"datacollector/libs"
 	"datacollector/mesures"
-	"sync"
 	"sync/atomic"
 	"time"
 )
 
-var statePool = sync.Pool{
-	New: func() any {
-		return new(DeviceState)
-	},
-}
+var statePool = libs.NewPool(func() *DeviceState {
+	return new(DeviceState)
+})
 
 type DeviceState struct {
 	Data   Telemetry
@@ -20,13 +18,13 @@ type DeviceState struct {
 }
 
 type Actor struct {
-	id       string
+	id       int
 	mailbox  chan Telemetry
 	snapshot atomic.Pointer[DeviceState]
 	queued   bool
 }
 
-func NewActor(id string) *Actor {
+func NewActor(id int) *Actor {
 	actor := &Actor{
 		id:      id,
 		mailbox: make(chan Telemetry, config.MAILBOX_SIZE),
@@ -41,7 +39,7 @@ func (a *Actor) Update(quantum int) bool {
 	for i := 0; i < quantum; i++ {
 		select {
 		case msg := <-a.mailbox:
-			state := statePool.Get().(*DeviceState)
+			state := statePool.Get()
 
 			state.Data = msg
 			state.Online = true
@@ -87,8 +85,4 @@ func (a *Actor) State() *DeviceState {
 	}
 
 	return snapshot
-}
-
-func (a *Actor) GetID() string {
-	return a.id
 }

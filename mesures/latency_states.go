@@ -185,7 +185,6 @@ func (s *LatencyStats) PrintResults(m runtime.MemStats) {
 		"heap_objects", m.HeapObjects,
 
 		"num_cpus", config.NUM_CPUS,
-		"num_of_workers", config.NUM_OF_WORKERS,
 		// "num_of_workers_updating", config.NUM_OF_WORKERS_UPDATING,
 
 		"total_alloc_mb", m.TotalAlloc/1024/1024,

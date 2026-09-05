@@ -64,8 +64,8 @@ func eventsHandler(manager *device.DeviceManager) http.HandlerFunc {
 	}
 }
 
-func StartServer(manager device.DeviceManager) {
-	http.HandleFunc("/events", eventsHandler(&manager))
+func StartServer(manager *device.DeviceManager) {
+	http.HandleFunc("/events", eventsHandler(manager))
 
 	log.Println("server listening on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
