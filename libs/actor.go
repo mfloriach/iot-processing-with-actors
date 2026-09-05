@@ -1,26 +1,24 @@
-package device
+package libs
 
 import (
-	"datacollector/config"
-	"datacollector/libs"
 	"datacollector/mesures"
 	"sync/atomic"
 	"time"
 )
 
-type Actor[S any] struct {
-	id          int
-	mailbox     chan Telemetry
-	pool        *libs.Pool[S]
+type Actor[S any, T any] struct {
+	ID          int
+	mailbox     chan T
+	pool        *Pool[S]
 	snapshot    atomic.Pointer[S]
-	updateState func(*S, Telemetry)
+	updateState func(*S, T)
 	queued      bool
 }
 
-func NewActor[S any](id int, pool *libs.Pool[S], updateState func(*S, Telemetry)) *Actor[S] {
-	actor := &Actor[S]{
-		id:          id,
-		mailbox:     make(chan Telemetry, config.MAILBOX_SIZE),
+func NewActor[S any, T any](id int, mailbox_size int, pool *Pool[S], updateState func(*S, T)) *Actor[S, T] {
+	actor := &Actor[S, T]{
+		ID:          id,
+		mailbox:     make(chan T, mailbox_size),
 		pool:        pool,
 		queued:      false,
 		updateState: updateState,
@@ -30,7 +28,11 @@ func NewActor[S any](id int, pool *libs.Pool[S], updateState func(*S, Telemetry)
 	return actor
 }
 
-func (a *Actor[S]) Update(quantum int) bool {
+func (a *Actor[S, T]) GetID() int {
+	return a.ID
+}
+
+func (a *Actor[S, T]) Update(quantum int) bool {
 	for i := 0; i < quantum; i++ {
 		select {
 		case msg := <-a.mailbox:
@@ -42,8 +44,6 @@ func (a *Actor[S]) Update(quantum int) bool {
 			oldState := a.snapshot.Swap(state)
 			a.pool.Put(oldState)
 
-			elapsed := time.Since(msg.TTL)
-			mesures.Stats.Add(elapsed)
 		default:
 			a.queued = false
 			return false
@@ -53,7 +53,7 @@ func (a *Actor[S]) Update(quantum int) bool {
 	return true
 }
 
-func (a *Actor[S]) Send(msg Telemetry) bool {
+func (a *Actor[S, T]) Send(msg T) bool {
 	select {
 	case a.mailbox <- msg:
 		// Sent immediately.
@@ -72,7 +72,7 @@ func (a *Actor[S]) Send(msg Telemetry) bool {
 	return true
 }
 
-func (a *Actor[S]) State() *S {
+func (a *Actor[S, T]) State() *S {
 	snapshot := a.snapshot.Load()
 	if snapshot == nil {
 		return new(S)

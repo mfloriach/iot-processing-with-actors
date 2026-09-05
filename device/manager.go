@@ -1,21 +1,23 @@
 package device
 
-import "datacollector/config"
+import (
+	"datacollector/libs"
+)
 
 type DeviceManager struct {
-	devices map[int]*Actor[DeviceState]
+	devices map[int]*libs.Actor[DeviceState, Telemetry]
 }
 
-func NewDeviceManager() *DeviceManager {
+func NewDeviceManager(max_sensor_num int) *DeviceManager {
 	return &DeviceManager{
-		devices: make(map[int]*Actor[DeviceState], config.SENSOR_PER_WORKER*config.NUM_CPUS),
+		devices: make(map[int]*libs.Actor[DeviceState, Telemetry], max_sensor_num),
 	}
 }
 
-func (m *DeviceManager) AddDevice(device *Actor[DeviceState]) {
-	m.devices[device.id] = device
+func (m *DeviceManager) AddDevice(device *libs.Actor[DeviceState, Telemetry]) {
+	m.devices[device.GetID()] = device
 }
 
-func (m *DeviceManager) GetDevice(id int) *Actor[DeviceState] {
+func (m *DeviceManager) GetDevice(id int) *libs.Actor[DeviceState, Telemetry] {
 	return m.devices[id]
 }
