@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	NUM_CPUS = 1
+	NUM_CPUS = 3
 
 	SENSOR_OF_ANALYSIS_ID = 0
 	MAILBOX_SIZE          = 10

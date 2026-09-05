@@ -1,7 +1,6 @@
 package libs
 
 import (
-	"fmt"
 	"sync"
 )
 
@@ -88,14 +87,9 @@ func (d *Deque[T]) Steal() (T, bool) {
 	// }
 
 	if len(d.items) == 0 {
-		fmt.Println(d.ID)
 		var zero T
 		return zero, false
 	}
-
-	fmt.Println("____________________")
-
-	fmt.Println("I can not steal")
 
 	t := d.items[0]
 	d.items = d.items[1:]

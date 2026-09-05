@@ -6,7 +6,6 @@ import (
 	"datacollector/device/messages"
 	"datacollector/injestors"
 	"datacollector/libs"
-	"fmt"
 )
 
 type Scheduler struct {
@@ -28,7 +27,9 @@ func (s *Scheduler) Run() {
 			100,
 		)
 
-		in := injestors.NewNewInjestor(i*config.SENSOR_PER_WORKER, ((i+1)*config.SENSOR_PER_WORKER)-1)
+		start := i * config.SENSOR_PER_WORKER
+		end := ((i + 1) * config.SENSOR_PER_WORKER) - 1
+		in := injestors.NewNewInjestor(start, end)
 
 		w := NewWorker(i, s.manager, &deque, in, s.onStealActor)
 		s.workers = append(s.workers, w)
@@ -44,7 +45,6 @@ func (s *Scheduler) onStealActor(workerID int) (*libs.Actor[device.DeviceState, 
 
 		actor, ok := victim.deque.Steal()
 		if ok {
-			fmt.Println("steal")
 			return actor, true
 		}
 	}
