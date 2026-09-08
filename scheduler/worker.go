@@ -41,7 +41,7 @@ func (w *Worker) Run() {
 func (w *Worker) submit(t messages.Message) {
 	d := w.manager.GetDevice(t.DeviceID)
 
-	if hasToEnque := d.Send(t); hasToEnque {
+	if hasToEnque := d.Send(t, int(t.Priority)); hasToEnque {
 		w.deque.Push(d)
 	}
 }

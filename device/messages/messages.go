@@ -16,6 +16,7 @@ type Priority uint8
 
 const (
 	PriorityCritical MessageKind = iota
+	PriorityHigh
 	PriorityNormal
 	PriorityLow
 )

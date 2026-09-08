@@ -1,12 +1,10 @@
 package libs
 
-type Job struct {
-	ID       string
-	Priority int
-	Run      func()
-}
+import (
+	"datacollector/device/messages"
+)
 
-type PriorityQueue []*Job
+type PriorityQueue []messages.Message
 
 func (pq PriorityQueue) Len() int {
 	return len(pq)
@@ -22,15 +20,15 @@ func (pq PriorityQueue) Swap(i, j int) {
 }
 
 func (pq *PriorityQueue) Push(x any) {
-	*pq = append(*pq, x.(*Job))
+	*pq = append(*pq, x.(messages.Message))
 }
 
 func (pq *PriorityQueue) Pop() any {
 	old := *pq
 	n := len(old)
 
-	job := old[n-1]
+	msg := old[n-1]
 	*pq = old[:n-1]
 
-	return job
+	return msg
 }
