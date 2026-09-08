@@ -37,30 +37,16 @@ func NewDeque[T any](id, size int, options ...DequeOption[T]) *Deque[T] {
 }
 
 func (d *Deque[T]) Push(t T) {
-	// start := time.Now()
-
 	d.mu.Lock()
 	defer d.mu.Unlock()
-
-	// wait := time.Since(start)
-	// if wait > 0 && d.hooks.OnBackpressure != nil {
-	// 	d.hooks.OnBackpressure(d.ID)
-	// }
 
 	d.items = append(d.items, t)
 }
 
 // Pop from the owner's side.
 func (d *Deque[T]) Pop() (T, bool) {
-	// start := time.Now()
-
 	d.mu.Lock()
 	defer d.mu.Unlock()
-
-	// wait := time.Since(start)
-	// if wait > 0 && d.hooks.OnBackpressure != nil {
-	// 	d.hooks.OnBackpressure(d.ID)
-	// }
 
 	n := len(d.items)
 	if n == 0 {
@@ -76,15 +62,8 @@ func (d *Deque[T]) Pop() (T, bool) {
 
 // Steal from the opposite side.
 func (d *Deque[T]) Steal() (T, bool) {
-	// start := time.Now()
-
 	d.mu.Lock()
 	defer d.mu.Unlock()
-
-	// wait := time.Since(start)
-	// if wait > 0 && d.hooks.OnBackpressure != nil {
-	// 	d.hooks.OnBackpressure(d.ID)
-	// }
 
 	if len(d.items) == 0 {
 		var zero T

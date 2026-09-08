@@ -34,6 +34,7 @@ func (ij *InjestorCount) injestorTelemetry(start, end int) {
 				Kind:     messages.MessageTelemetry,
 				DeviceID: i,
 				TTL:      time.Now(),
+				Priority: messages.Priority(messages.PriorityLow),
 				Telemetry: messages.Telemetry{
 					Temperature: float64(count),
 					Humidity:    float64(count),
@@ -54,6 +55,7 @@ func (ij *InjestorCount) injestorCommand(deviceID int) {
 	for range ticker.C {
 		ij.submit(messages.Message{
 			Kind:     messages.MessageCommand,
+			Priority: messages.Priority(messages.PriorityCritical),
 			DeviceID: deviceID,
 			TTL:      time.Now(),
 			Command: messages.Command{
@@ -74,6 +76,7 @@ func (ij *InjestorCount) injestorAlarm(deviceID int) {
 			Kind:     messages.MessageAlarm,
 			DeviceID: deviceID,
 			TTL:      time.Now(),
+			Priority: messages.Priority(messages.PriorityCritical),
 			Alarm: messages.Alarm{
 				Type:      messages.AlarmBatteryLow,
 				Severity:  messages.SeverityWarning,
