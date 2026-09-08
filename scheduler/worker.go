@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"datacollector/config"
 	"datacollector/device"
 	"datacollector/device/messages"
 	"datacollector/injestors"
@@ -57,7 +58,7 @@ func (w *Worker) update() {
 			}
 		}
 
-		if hasToEnque := a.Update(1); hasToEnque {
+		if hasToEnque := a.Update(config.QUANTUM); hasToEnque {
 			w.deque.Push(a)
 		}
 	}

@@ -1,16 +1,6 @@
 
 
 
-# TODO
-Priority — alarmas antes que telemetría.
-weighted priority scheduler -> 
-
-Per-device ordering — mantener orden dentro de cada device.
-Coalescing — si llegan 100 actualizaciones de temperatura, procesar solo la última.
-Rate limiting — limitar cuánto trabajo genera un device.
-Deadlines — tareas con deadline tienen prioridad.
-
-
 # Implemented
 * Actor mailbox → autoridad para modificar el estado.
 * Snapshot/atomic → lectura rápida del último estado.

@@ -1,79 +1,168 @@
 # iot_data_collection
 
-A Go telemetry simulator for exploring actor mailboxes, sharded workers, backpressure, and SSE streaming under load.
+[![Go 1.26.4](https://img.shields.io/badge/Go-1.26.4-00ADD8?logo=go&logoColor=white)](https://go.dev/dl/)
+[![SSE /events](https://img.shields.io/badge/SSE-%2Fevents-0F766E)](#run-it)
+[![pprof :6060](https://img.shields.io/badge/pprof-6060-6B7280)](#run-it)
 
-It creates a large set of synthetic sensors, feeds them random telemetry, and keeps the latest state in memory for fast reads. The project is useful as a concurrency playground or as a benchmark for experimenting with scheduling and queueing strategies.
+A Go simulator for actor-style IoT telemetry processing: per-device mailboxes, sharded workers, backpressure, SSE delivery, and runtime metrics.
+
+It is useful as a concurrency playground and as a load testbed for scheduling, queueing, and in-memory state updates.
 
 ## What It Does
 
-- Simulates `NUM_OF_SENSORS` devices and continuously generates telemetry for them.
-- Uses a per-device mailbox so each device is the authority over its own state.
-- Requeues busy devices through a shared ready queue so one hot device does not monopolize a worker.
-- Publishes the latest state of `sensor-0` over Server-Sent Events.
-- Tracks latency, backlog, GC, and backpressure metrics while the app runs.
+- Generates synthetic telemetry, alarms, and commands for a large set of simulated devices.
+- Routes each message through a per-device actor that owns its state.
+- Uses priority mailboxes and a shared worker deque so busy devices do not monopolize a worker.
+- Exposes the latest snapshot for the analysis sensor over Server-Sent Events.
+- Prints latency, backlog, GC, and mailbox backpressure metrics while the program runs.
+- Serves `pprof` on `localhost:6060` for profiling.
 
-## Requirements
+## Components
+
+| Component | Path | Responsibility | Connects to |
+|---|---|---|---|
+| Bootstrap | `main.go` | Configures logging, allocates the actor pool, creates devices, and starts the scheduler, SSE server, and metrics loop. | `scheduler`, `server.go`, `mesures` |
+| Message generators | `injestors/count.go` | Produces synthetic telemetry, alarm, and command messages on timers. | `scheduler.Worker` |
+| Scheduler | `scheduler/scheduler.go` | Creates one worker per CPU and assigns each worker a device range. | `scheduler.Worker`, `libs.Deque` |
+| Worker | `scheduler/worker.go` | Pulls generated messages, sends them to the target device, and updates queued actors. | `device.DeviceManager`, `libs.Actor` |
+| Actor runtime | `libs/actor.go`, `libs/mailbox.go`, `libs/pool.go` | Holds the mailbox, publishes atomic snapshots, and reuses state objects. | `device.DeviceState`, `device.Apply` |
+| Device model | `device/manager.go`, `device/state.go` | Stores devices and applies telemetry updates to device state. | `libs.Actor`, `device/messages` |
+| SSE server | `server.go` | Streams the latest snapshot for `SENSOR_OF_ANALYSIS_ID` at `/events`. | `device.DeviceManager` |
+| Metrics | `mesures/latency_states.go` | Tracks latency, backlog, GC, and backpressure, and starts the `pprof` server. | `config`, `runtime`, `net/http/pprof` |
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph Generators
+    IG[Ingestors\ninjestors/count.go]
+  end
+
+  subgraph Scheduling
+    SCH[Scheduler\nscheduler/scheduler.go]
+    WRK[Workers\nscheduler/worker.go]
+    DQ[Per-worker deque\nlibs/dequeu.go]
+  end
+
+  subgraph DeviceRuntime
+    DM[DeviceManager\ndevice/manager.go]
+    ACT[Actor per device\nlibs/actor.go]
+    MB[Priority mailbox\nlibs/mailbox.go]
+    SNAP[Atomic snapshot\nlibs/actor.go]
+    ST[DeviceState\ndevice/state.go]
+  end
+
+  subgraph Observability
+    SSE[SSE /events\nserver.go]
+    MET[Latency stats + pprof\nmesures/latency_states.go]
+  end
+
+  IG --> SCH --> WRK
+  WRK --> DM --> ACT --> MB --> ST --> SNAP
+  ACT -. hooks: latency/backpressure .-> MET
+  SNAP --> SSE
+  IG -. generated events .-> MET
+  SCH <--> DQ
+  WRK <--> DQ
+```
+
+## Run It
+
+Requirements:
 
 - Go `1.26.4` or newer.
-- A terminal that can run long-lived Go processes.
-- Optional: `curl` or a browser if you want to inspect the SSE stream.
+- A terminal that can keep a long-running process open.
+- Optional: `curl` or a browser to inspect the SSE stream.
 
-## Quick Start
-
-From a clone of this repository:
+Start the simulator from the repository root:
 
 ```bash
-$ go run .
+go run .
 ```
 
-The process starts the simulator, opens:
+Then open:
 
 - `http://localhost:8080/events` for SSE updates
-- `http://localhost:6060/debug/pprof/` for pprof
+- `http://localhost:6060/debug/pprof/` for profiling
 
-To watch the event stream:
+To watch the event stream from the terminal:
 
 ```bash
-$ curl -N -H "Accept: text/event-stream" http://localhost:8080/events
+curl -N -H "Accept: text/event-stream" http://localhost:8080/events
 ```
 
-Expected output is a stream of `data:` frames containing JSON snapshots, for example:
+Example frame:
 
 ```text
-data: {"Data":{"DeviceID":"sensor-0","Temperature":0,"Humidity":0,"Battery":0,"Noise":0},"Online":true}
+data: {"Data":{"Temperature":0,"Humidity":0,"Battery":0,"Noise":0},"Online":true}
 ```
+
+## Demo
+
+The fastest way to see the system working is to run the simulator and stream the analysis device:
+
+```bash
+go run .
+```
+
+In a second terminal:
+
+```bash
+curl -N -H "Accept: text/event-stream" http://localhost:8080/events
+```
+
+You should see one SSE frame per second with the latest snapshot for the configured analysis device. A typical sequence looks like this:
+
+```text
+data: {"Data":{"Temperature":0,"Humidity":0,"Battery":0,"Noise":0},"Online":true}
+data: {"Data":{"Temperature":1,"Humidity":1,"Battery":1,"Noise":1},"Online":true}
+data: {"Data":{"Temperature":2,"Humidity":2,"Battery":2,"Noise":2},"Online":true}
+```
+
+If you want to inspect runtime behavior while the stream is running, open:
+
+- `http://localhost:6060/debug/pprof/`
+- the structured logs printed by `mesures/latency_states.go`
 
 ## Configuration
 
-Runtime settings live in [`config/configuration.go`](config/configuration.go):
+Current runtime settings live in [`config/configuration.go`](config/configuration.go):
 
-- `NUM_CPUS` - sets `GOMAXPROCS`
-- `NUM_OF_WORKERS_UPDATING` - number of workers that drain ready actors
-- `NUM_OF_WORKERS_GENERETIC_NOISE` - number of workers that generate synthetic telemetry
-- `NUM_OF_SENSORS` - total number of simulated sensors
-- `SENSOR_OF_ANALYSIS_ID` - the device exposed through `/events`
+| Constant | Default | Purpose |
+|---|---:|---|
+| `NUM_CPUS` | `1` | Sets `GOMAXPROCS` and the number of scheduler workers. |
+| `SENSOR_OF_ANALYSIS_ID` | `0` | Device exposed through `/events`. |
+| `MAILBOX_SIZE` | `50` | Capacity of each priority lane in the mailbox. |
+| `PRINT_TELEMETRY` | `10s` | Interval used by the metrics loop. |
+| `SENSOR_PER_WORKER` | `1_500_000` | Number of simulated sensors assigned to each worker. |
+| `QUANTUM` | `10` | Reserved tuning constant for worker quantum-based processing. |
 
-If you want to change the scale of the simulation, update those constants and rerun the program.
+The total simulated device count is `NUM_CPUS * SENSOR_PER_WORKER`.
 
 ## How It Works
 
-The main flow is:
+1. `main.go` sets up logging, allocates a `sync.Pool` for `device.DeviceState`, creates the `DeviceManager`, and registers all devices.
+2. `scheduler.Scheduler` spawns one `Worker` per CPU and gives each worker a device range plus a generator.
+3. `injestors/count.go` emits telemetry, alarm, and command messages on timers and sends them into the worker.
+4. `libs.Actor` pushes messages into a four-lane priority mailbox, applies them to a pooled state object, and publishes an atomic snapshot for readers.
+5. `server.go` reads the latest snapshot for `SENSOR_OF_ANALYSIS_ID` and streams it through `/events`.
+6. `mesures/latency_states.go` records processing latency, backlog, and backpressure, prints periodic metrics, and starts `pprof` on `localhost:6060`.
 
-1. `main.go` initializes metrics, creates the device manager, and registers the sensors.
-2. `scheduler.Scheduler` generates telemetry and sends it into the device manager.
-3. Each `device.Actor` owns a mailbox and publishes a lock-free snapshot for readers.
-4. `server.go` serves the latest snapshot for `sensor-0` over SSE.
-5. `mesures/latency_states.go` prints periodic latency and memory statistics.
+The system is intentionally in-memory and ephemeral. It does not persist telemetry to disk or to a database.
 
-The current design is intentionally in-memory and ephemeral. It does not persist telemetry to disk or a database.
+## Current Status
 
-## Project Status
-
-This repository is still evolving. The current roadmap in `TODO.md` includes:
+This repository is still evolving. The roadmap in [`TODO.md`](TODO.md) currently includes:
 
 - alarm priority over telemetry
-- work stealing
+- weighted priority scheduling
 - per-device ordering guarantees
 - coalescing duplicate updates
 - rate limiting per device
 - deadline-aware scheduling
+
+## Notes
+
+- The mailbox currently has four priority lanes and always drains the highest-priority lane first.
+- The SSE endpoint streams the current snapshot for the configured analysis device, not a historical event log.
+- `QUANTUM` is defined in configuration, but the current worker loop still processes one message per `Update(1)` call.
