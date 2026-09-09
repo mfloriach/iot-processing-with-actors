@@ -154,12 +154,19 @@ The system is intentionally in-memory and ephemeral. It does not persist telemet
 
 This repository is still evolving. The roadmap in [`TODO.md`](TODO.md) currently includes:
 
-- alarm priority over telemetry
-- weighted priority scheduling
-- per-device ordering guarantees
-- coalescing duplicate updates
-- rate limiting per device
-- deadline-aware scheduling
+- Alarm priority over telemetry
+- Weighted priority scheduling
+- Per-device ordering guarantees
+- Coalescing duplicate updates
+- Rate limiting per device (backpresure)
+- Deadline-aware scheduling
+- Snapshot/atomic → lectura rápida del último estado.
+- No go routine for actor
+- Work stealing — workers idle pueden robar trabajo.
+- SSE for event publish
+- Fairness — un device con 10.000 tareas no monopoliza el worker.
+- quantum - You don't necessarily need exactly one task per turn. Use a quantum
+- Backpressure — limitar tareas pendientes.
 
 ## Notes
 

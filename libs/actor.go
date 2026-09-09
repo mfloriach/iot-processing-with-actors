@@ -34,7 +34,7 @@ type Actor[S any, M any] struct {
 	update   func(*S, M)
 }
 
-func NewActor[S any, M any](id int,
+func NewActorWithPriorityQueues[S any, M any](id int,
 	mailboxSize uint,
 	pool *Pool[S],
 	update func(*S, M),
