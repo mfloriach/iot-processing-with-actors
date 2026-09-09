@@ -172,4 +172,3 @@ This repository is still evolving. The roadmap in [`TODO.md`](TODO.md) currently
 
 - The mailbox currently has four priority lanes and always drains the highest-priority lane first.
 - The SSE endpoint streams the current snapshot for the configured analysis device, not a historical event log.
-- `QUANTUM` is defined in configuration, but the current worker loop still processes one message per `Update(1)` call.
