@@ -37,7 +37,7 @@ func main() {
 
 	manager := device.NewDeviceManager(config.SENSOR_PER_WORKER * config.NUM_CPUS)
 	for i := 0; i < config.NUM_CPUS*config.SENSOR_PER_WORKER; i++ {
-		manager.AddDevice(libs.NewActorWithPriorityQueues(
+		manager.AddDevice(libs.NewActorWithWeightedPriority(
 			i,
 			config.MAILBOX_SIZE,
 			deviceStatePool,
